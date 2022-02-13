@@ -38,17 +38,20 @@ export default async function handler(req, res) {
       "aggs": {
         "projects": {
           "terms": {
-            "field": "ProjectName"
+            "field": "ProjectName",
+            "size": 100
           },
           "aggs": {
             "OIM_Organization": {
               "terms": {
-                "field": "OIM_Organization"
+                "field": "OIM_Organization",
+                "size": 100
               },
               "aggs": {
                 "OIM_NSFFieldOfScience": {
                   "terms": {
-                    "field": "OIM_NSFFieldOfScience"
+                    "field": "OIM_NSFFieldOfScience",
+                    "size": 100
                   },
                   "aggs": {
                     "CoreHours": {
@@ -70,14 +73,18 @@ export default async function handler(req, res) {
   //console.log(result.aggregations.buckets);
   var projects = new Array();
 
-  result.aggregations.projects.buckets.forEach(function(bucket) {
-    var project = {
-      'name': bucket.key,
-      'organization': bucket.OIM_Organization.buckets[0].key,
-      'fieldofscience': bucket.OIM_Organization.buckets[0].OIM_NSFFieldOfScience.buckets[0].key,
-      'usage': bucket.OIM_Organization.buckets[0].OIM_NSFFieldOfScience.buckets[0].CoreHours.value,
-    };
-    projects.push(project);
+  result.aggregations.projects.buckets.forEach(function (bucket) {
+    try {
+      var project = {
+        'name': bucket.key,
+        'organization': bucket.OIM_Organization.buckets[0].key,
+        'fieldofscience': bucket.OIM_Organization.buckets[0].OIM_NSFFieldOfScience.buckets[0].key,
+        'usage': bucket.OIM_Organization.buckets[0].OIM_NSFFieldOfScience.buckets[0].CoreHours.value,
+      };
+      projects.push(project);
+    } catch (e) {
+      console.log(e);
+    }
   });
   res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate')
   res.status(200).json({ projects: projects });
