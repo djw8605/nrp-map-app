@@ -1,4 +1,18 @@
-
 #map {
-    height: 250px;
+    height: 400px;
+}
+
+thead {
+    /*
+    background-color: #062f4f;
+    color: #fff;
+    */
+}
+
+nav {
+    background-color: #062f4f;
+}
+
+.navbar {
+    margin-bottom: 20px;
 }

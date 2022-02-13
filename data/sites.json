@@ -1,0 +1,79 @@
+{
+    "sites": [
+        {
+            "name": "University of South Dakota",
+            "url": "http://www.usd.edu/",
+            "logo": "/images/usd.png",
+            "lat": 42.788458950069916, 
+            "log": -96.92537028836695
+        },
+        {
+            "name": "Kansas State University",
+            "url": "https://www.k-state.edu/",
+            "logo": "/images/ksu.png",
+            "lat": 39.19756008319545,
+            "log": -96.58472490196472
+        },
+        {
+          "name": "University of Kansas",
+          "url": "https://ku.edu/",
+          "logo": "/images/ku.png",
+          "lat": 38.95456914692783,
+          "log": -95.25580683080793
+        },
+        {
+          "name": "Oral Roberts University",
+          "url": "https://www.oru.edu/",
+          "logo": "/images/oru.png",
+          "lat": 36.051059306157484,
+          "log": -95.95360712903401
+
+      },
+        {
+          "name": "South Dakota State University",
+          "url": "https://www.sdstate.edu/",
+          "logo": "/images/sdstate.png",
+          "lat": 44.31931433210406,
+          "log": -96.78355038831918
+
+      },
+        {
+          "name": "Oklahoma State University",
+          "url": "https://www.okstate.edu/",
+          "logo": "/images/osu.png",
+          "lat": 36.12722289343262, 
+          "log": -97.07367928670455
+
+      },
+      {
+        "name": "University of Arkansas for Medical Sciences",
+        "url": "https://www.uams.edu/",
+        "logo": "",
+        "lat": 34.74954458019702, 
+        "log": -92.32063891743086
+      },
+      {
+        "name": "Southeast Missouri State University",
+        "url": "https://semo.edu/",
+        "logo": "/images/semo.jpeg",
+        "lat": 37.315031870373815, 
+        "log": -89.52802234434493
+      },
+      {
+        "name": "South Dakota School of Mines and Technology",
+        "url": "https://www.sdsmt.edu/",
+        "logo": "/images/sdsmt.png",
+        "lat": 44.07438180341191,
+        "log": -103.20595245949066
+      },
+      {
+        "name": "Langston University",
+        "url": "https://www.langston.edu/",
+        "logo": "/images/langston.png",
+        "lat": 35.94624880950671, 
+        "log": -97.26299283274462
+      }
+
+
+    ]
+}

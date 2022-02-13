@@ -1,31 +1,51 @@
 import React, { useEffect, useRef, ReactElement } from "react";
+import Sites from "../data/sites.json"
 
 
-export default function Map(){
+class Map extends React.Component {
+  markers = new Array();
   
-  const ref = useRef();
-
-  useEffect(() => {
+  componentDidMount() {
     const uluru = { lat: 39.63517934689119, lng: -97.0739061397193 };
+    
     // The map, centered at Uluru
-    const map = new google.maps.Map(document.getElementById("map"), {
-      zoom: 4,
+    this.map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 5,
       center: uluru,
+      disableDefaultUI: true,
     });
-    // The marker, positioned at Uluru
-    const marker = new google.maps.Marker({
-      position: uluru,
-      map: map,
+
+    Sites.sites.map((site) => {
+      console.log(site);
+      var marker = new google.maps.Marker({
+        position: { lat: site.lat, lng: site.log },
+        map: this.map,
+      });
+      const infowindow = new google.maps.InfoWindow({
+        content: site.name,
+      });
+      var map = this.map;
+      marker.addListener("click", () => {
+        infowindow.open({
+          anchor: marker,
+          map,
+          shouldFocus: false,
+        });
+      });
+      this.markers.push(marker);
     });
-    return map;
-  });
+  }
+
   
-  
-  return (
-    <div ref={ref} id="map"></div>
-  )
+  render() {
+    return (
+      <div id="map"></div>
+    )
+  }
 
 
 }
+
+export default Map;
 
 
