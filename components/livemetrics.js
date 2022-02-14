@@ -55,13 +55,13 @@ export default function LiveMetrics() {
 
   return (
     <>
-      <div className='col-md-4'>
+      <div className='col-xl-4'>
         <LiveMetricRate title='Core Hours' value={coreHours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
       </div>
-      <div className='col-md-4'>
+      <div className='col-xl-4'>
         <LiveMetricRate title='Projects' value={totalProjects} loading={loading} colorScheme="l-bg-cherry" icon={faUserGroup} />
       </div>
-      <div className='col-md-4'>
+      <div className='col-xl-4'>
         <LiveMetricRate title='Organizations' value={totalOrganizations} loading={loading} colorScheme="l-bg-cyan" icon={faBuildingColumns} />
       </div>
     </>
