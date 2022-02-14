@@ -1,19 +1,17 @@
 import React from "react";
-import useSWR from 'swr'
-
-const fetcher = (url) => fetch(url).then((res) => res.json());
+import { GetProjects } from "./gatherdata";
 
 function numberWithCommas(x) {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function Projects() {
-  const { data, error } = useSWR('/api/projects', fetcher, { refreshInterval: 3600000 });
+  const { data, error } = GetProjects();
   if (!data) {
     return (
       <tr key='loading'>
         <td colSpan='2'>
-          <div class="spinner-border spinner-border-sm" role="status">
+          <div className="spinner-border spinner-border-sm" role="status">
           </div>&nbsp;Loading...</td>
       </tr>
     )

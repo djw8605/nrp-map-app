@@ -27,7 +27,7 @@ export default async function handler(req, res) {
             {
               "range": {
                 "EndTime": {
-                  "gte": "now-6M",
+                  "gte": "now-5y",
                   "lt": "now"
                 }
               }

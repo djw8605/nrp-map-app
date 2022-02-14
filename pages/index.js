@@ -6,6 +6,7 @@ import Map from '../components/map'
 import SiteList from '../components/sitelist'
 import ProjectUsage from '../components/projectusage'
 import { Wrapper } from "@googlemaps/react-wrapper";
+import LiveMetrics from '../components/livemetrics'
 
 export default function Home() {
   return (
@@ -15,46 +16,55 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <NavBar></NavBar>
-      <div className="container">
 
 
-        <div className='row'>
-          <div className='col-md-8'>
-            <Wrapper apiKey={process.env.NEXT_PUBLIC_MAPS_KEY}>
-              <Map />
-            </Wrapper>
-
-          </div>
-          <div className='col-md-4'>
-            <div className='row'>
-              <div className='col-md-12'>
-                <SiteList />
+      <section className='top-section'>
+        <div className="container">
+          <div className='row'>
+            <div className='col-md-6'>
+              <div className='row'>
+                <div className='col-md-12'>
+                  <h1>
+                    The Great Plains Augmented Regional Gateway to the Open Science Grid
+                  </h1>
+                </div>
+              </div>
+              <div className='row room-at-top'>
+                
+                <LiveMetrics />
+                <div className='col-md-12 '>
+                  <h3 className='text-center'>
+                    Resources contributed to the <a href="https://opensciencegrid.org">Open Science Grid</a>
+                  </h3>
+                </div>
               </div>
             </div>
+            <div className='col-md-6'>
+              <Wrapper apiKey={process.env.NEXT_PUBLIC_MAPS_KEY}>
+                <Map />
+              </Wrapper>
+
+            </div>
           </div>
-          <hr className='hr-aftermap' />
-          <h1 class="display-6">OSG Usage of the Regional Gateway</h1>
+        </div>
+      </section>
+      <section className='middle-section'>
+        <div className="container">
           <div className='row'>
+            <div className='col-md-4'>
+              <SiteList />
+            </div>
             <div className='col-md-4'>
               <ProjectUsage />
             </div>
             <div className='col-md-4'>
-            <iframe src="https://gracc.opensciencegrid.org/d-solo/000000079/site-summary?orgId=1&var-interval=7d&var-site=GP-ARGO&var-type=Batch&panelId=22&from=now-6M&to=now" width="450" height="200" frameborder="0"></iframe>
+              <iframe src="https://gracc.opensciencegrid.org/d-solo/000000079/site-summary?orgId=1&var-interval=7d&var-site=GP-ARGO&var-type=Batch&panelId=22&from=now-6M&to=now" width="450" height="200" frameBorder="1"></iframe>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
       <Footer></Footer>
-      <style jsx>{`
-        hr.hr-aftermap {
-          border: 0;
-          height: 3px;
-          background: #333;
-          background-image: linear-gradient(to right, #ccc, #333, #ccc);
-          margin-top: 0.2em;
-          margin-bottom: 0.2em;
-        }
-      `}</style>
     </>
   )
 }
