@@ -58,7 +58,9 @@ export default function Home() {
               <ProjectUsage />
             </div>
             <div className='col-md-4'>
-              <iframe src="https://gracc.opensciencegrid.org/d-solo/000000079/site-summary?orgId=1&var-interval=7d&var-site=GP-ARGO&var-type=Batch&panelId=22&from=now-6M&to=now" width="450" height="200" frameBorder="1"></iframe>
+              <div className='embed-responsive embed-responsive-16by9'>
+              <iframe className='embed-responsive-item' src="https://gracc.opensciencegrid.org/d-solo/000000079/site-summary?orgId=1&var-interval=7d&var-site=GP-ARGO&var-type=Batch&panelId=22&from=now-6M&to=now" width="100%" height="250" frameBorder="1"></iframe>
+              </div>
             </div>
           </div>
         </div>
