@@ -13,7 +13,7 @@ export default function Home() {
     <>
       <Head>
         <title>GP-ARGO</title>
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" href="/GPN_favicon4.png" />
       </Head>
       <NavBar></NavBar>
 
