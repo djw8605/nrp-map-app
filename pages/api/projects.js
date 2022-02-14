@@ -48,9 +48,9 @@ export default async function handler(req, res) {
                 "size": 100
               },
               "aggs": {
-                "OIM_NSFFieldOfScience": {
+                "OIM_FieldOfScience": {
                   "terms": {
-                    "field": "OIM_NSFFieldOfScience",
+                    "field": "OIM_FieldOfScience",
                     "size": 100
                   },
                   "aggs": {
@@ -78,12 +78,12 @@ export default async function handler(req, res) {
       var project = {
         'name': bucket.key,
         'organization': bucket.OIM_Organization.buckets[0].key,
-        'fieldofscience': bucket.OIM_Organization.buckets[0].OIM_NSFFieldOfScience.buckets[0].key,
-        'usage': bucket.OIM_Organization.buckets[0].OIM_NSFFieldOfScience.buckets[0].CoreHours.value,
+        'fieldofscience': bucket.OIM_Organization.buckets[0].OIM_FieldOfScience.buckets[0].key,
+        'usage': bucket.OIM_Organization.buckets[0].OIM_FieldOfScience.buckets[0].CoreHours.value,
       };
       projects.push(project);
     } catch (e) {
-      console.log(e);
+      console.log("Failed to parse project: " + bucket.key);
     }
   });
   res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate')

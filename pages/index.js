@@ -27,17 +27,15 @@ export default function Home() {
                   <h1>
                     The Great Plains Augmented Regional Gateway to the Open Science Grid
                   </h1>
+                  <p>
+                    GP-ARGO creates a regional distributed <a href="https://opensciencegrid.org">Open Science Grid</a> (OSG) Gateway
+                    led by the <a href="https://www.greatplains.net/">Great Plains Network</a> (GPN) to support computational and data-intensive
+                    research across the region through the development of specialized CI resources,
+                    workforce training, and cross-support methodologies and agreements.
+                  </p>
                 </div>
               </div>
-              <div className='row room-at-top'>
-                
-                <LiveMetrics />
-                <div className='col-md-12 '>
-                  <h3 className='text-center'>
-                    Resources contributed to the <a href="https://opensciencegrid.org">Open Science Grid</a>
-                  </h3>
-                </div>
-              </div>
+
             </div>
             <div className='col-md-6'>
               <Wrapper apiKey={process.env.NEXT_PUBLIC_MAPS_KEY}>
@@ -45,6 +43,20 @@ export default function Home() {
               </Wrapper>
 
             </div>
+          </div>
+        </div>
+      </section>
+      <section>
+        <div className='container'>
+
+          <div className='row'>
+            <div className='col-md-12 '>
+              <h3 className='text-center'>
+                Resources contributed to the <a href="https://opensciencegrid.org">Open Science Grid</a>
+              </h3>
+            </div>
+            <LiveMetrics />
+
           </div>
         </div>
       </section>
@@ -59,7 +71,7 @@ export default function Home() {
             </div>
             <div className='col-md-4'>
               <div className='embed-responsive embed-responsive-16by9'>
-              <iframe className='embed-responsive-item' src="https://gracc.opensciencegrid.org/d-solo/000000079/site-summary?orgId=1&var-interval=7d&var-site=GP-ARGO&var-type=Batch&panelId=22&from=now-6M&to=now" width="100%" height="250" frameBorder="1"></iframe>
+                <iframe className='embed-responsive-item' src="https://gracc.opensciencegrid.org/d-solo/000000079/site-summary?orgId=1&var-interval=7d&var-site=GP-ARGO&var-type=Batch&panelId=22&from=now-6M&to=now" width="100%" height="250" frameBorder="1"></iframe>
               </div>
             </div>
           </div>

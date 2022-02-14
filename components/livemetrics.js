@@ -39,13 +39,15 @@ export default function LiveMetrics() {
 
   useEffect(() => {
     // Update the number of core hours as if GP-ARGO is
-    // running 50k core hours a day.
+    // running 200k core hours a day.
+    // Per-second calculation:
+    // 200k core hours / (60 seconds * 60 minutes * 24 hours)
     const interval = setInterval(() => {
       setCoreHours((coreHours) => {
         if (coreHours > 0) coreHours += 1
         return coreHours;
       });
-    }, (1 / .08) * 1000);
+    }, (1 / (200000 / (60 * 60 * 24))) * 1000);
     return () => {
       clearInterval(interval);
     }
@@ -55,14 +57,14 @@ export default function LiveMetrics() {
 
   return (
     <>
-      <div className='col-xl-4'>
-        <LiveMetricRate title='Core Hours' value={coreHours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
+      <div className='col-md-4'>
+        <LiveMetricRate title='Core Hours Contributed' value={coreHours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
       </div>
-      <div className='col-xl-4'>
-        <LiveMetricRate title='Projects' value={totalProjects} loading={loading} colorScheme="l-bg-cherry" icon={faUserGroup} />
+      <div className='col-md-4'>
+        <LiveMetricRate title='OSG Projects' value={totalProjects} loading={loading} colorScheme="l-bg-cherry" icon={faUserGroup} />
       </div>
-      <div className='col-xl-4'>
-        <LiveMetricRate title='Organizations' value={totalOrganizations} loading={loading} colorScheme="l-bg-cyan" icon={faBuildingColumns} />
+      <div className='col-md-4'>
+        <LiveMetricRate title='Institutions Supported' value={totalOrganizations} loading={loading} colorScheme="l-bg-cyan" icon={faBuildingColumns} />
       </div>
     </>
   )
