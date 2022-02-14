@@ -59,10 +59,10 @@ export default function LiveMetrics() {
         <LiveMetricRate title='Core Hours' value={coreHours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
       </div>
       <div className='col-md-4'>
-        <LiveMetricRate title='Projects' value={totalProjects} loading={loading} colorScheme="l-bg-cyan" icon={faUserGroup} />
+        <LiveMetricRate title='Projects' value={totalProjects} loading={loading} colorScheme="l-bg-cherry" icon={faUserGroup} />
       </div>
       <div className='col-md-4'>
-        <LiveMetricRate title='Organizations' value={totalOrganizations} loading={loading} colorScheme="l-bg-blue-dark" icon={faBuildingColumns} />
+        <LiveMetricRate title='Organizations' value={totalOrganizations} loading={loading} colorScheme="l-bg-cyan" icon={faBuildingColumns} />
       </div>
     </>
   )
