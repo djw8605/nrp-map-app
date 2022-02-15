@@ -7,8 +7,22 @@ import SiteList from '../components/sitelist'
 import ProjectUsage from '../components/projectusage'
 import { Wrapper } from "@googlemaps/react-wrapper";
 import LiveMetrics from '../components/livemetrics'
+import absoluteUrl from 'next-absolute-url'
 
-export default function Home() {
+
+
+export async function getServerSideProps(context) {
+  const { origin } = absoluteUrl(context.req)
+  return {
+    props: {
+      origin: origin
+    }, 
+  }
+}
+
+
+export default function Home(props) {
+  const twitterCardImage = `${props.origin}/twitter-card.png`
   return (
     <>
       <Head>
@@ -20,7 +34,7 @@ export default function Home() {
         <meta name="twitter:title" content="The Great Plains Augmented Regional Gateway to the Open Science Grid
 " />
         <meta name="twitter:description" content="GP-ARGO creates a regional distributed Open Science Grid (OSG) Gateway led by the Great Plains Network (GPN) to support computational and data-intensive research across the region through the development of specialized CI resources, workforce training, and cross-support methodologies and agreements." />
-        <meta name="twitter:image" content="/twitter-card.png" />
+        <meta name="twitter:image" content={twitterCardImage} />
       </Head>
       <NavBar></NavBar>
 
