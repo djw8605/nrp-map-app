@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import useSWR from 'swr'
 import { GetCoreHoursRate, GetProjects } from './gatherdata';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMicrochip, faBuildingColumns, faUserGroup } from '@fortawesome/free-solid-svg-icons'
+import { faMicrochip, faBuildingColumns, faUserGroup, faArrowUp } from '@fortawesome/free-solid-svg-icons'
+
+var rateInterval = 0;
 
 function numberWithCommas(x) {
   if (x === undefined) {
@@ -17,6 +19,7 @@ function numberWithCommas(x) {
 
 export default function LiveMetrics() {
   const [coreHours, setCoreHours] = useState(0);
+  var coreHoursRate = 28000;
   var totalProjects = 0;
   var totalOrganizations = 0;
   var loading = true;
@@ -47,7 +50,7 @@ export default function LiveMetrics() {
         if (coreHours > 0) coreHours += 1
         return coreHours;
       });
-    }, (1 / (200000 / (60 * 60 * 24))) * 1000);
+    }, (1 / (coreHoursRate / (60 * 60 * 24))) * 1000);
     return () => {
       clearInterval(interval);
     }
@@ -58,7 +61,7 @@ export default function LiveMetrics() {
   return (
     <>
       <div className='col-md-4'>
-        <LiveMetricRate title='Core Hours Contributed' value={coreHours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
+        <LiveMetricRate title='Core Hours Contributed' rate={coreHoursRate} loading={loading} value={coreHours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
       </div>
       <div className='col-md-4'>
         <LiveMetricRate title='OSG Projects' value={totalProjects} loading={loading} colorScheme="l-bg-cherry" icon={faUserGroup} />
@@ -96,6 +99,15 @@ function LiveMetricRate(props) {
                 }
               </h2>
             </div>
+            {props.rate ? (
+              <>
+                <div class="col-4 text-right">
+                  <span><FontAwesomeIcon icon={faArrowUp} />~{numberWithCommas(props.rate)}/day</span>
+                </div>
+              </>
+            ) : (
+              <></>
+            )}
           </div>
         </div>
       </div>
