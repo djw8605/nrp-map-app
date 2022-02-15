@@ -14,6 +14,13 @@ export default function Home() {
       <Head>
         <title>GP-ARGO</title>
         <link rel="icon" type="image/png" href="/GPN_favicon4.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@DerekWeitzel" />
+        <meta name="twitter:creator" content="@DerekWeitzel" />
+        <meta name="twitter:title" content="The Great Plains Augmented Regional Gateway to the Open Science Grid
+" />
+        <meta name="twitter:description" content="GP-ARGO creates a regional distributed Open Science Grid (OSG) Gateway led by the Great Plains Network (GPN) to support computational and data-intensive research across the region through the development of specialized CI resources, workforce training, and cross-support methodologies and agreements." />
+        <meta name="twitter:image" content="/twitter-card.png" />
       </Head>
       <NavBar></NavBar>
 
