@@ -11,8 +11,14 @@ import absoluteUrl from 'next-absolute-url'
 
 
 
-export async function getServerSideProps(context) {
-  const { origin } = absoluteUrl(context.req)
+export async function getServerSideProps({req, res}) {
+  const { origin } = absoluteUrl(req)
+  // Cache the index page for 1 hour
+  res.setHeader(
+    'Cache-Control',
+    'public, s-maxage=3600, stale-while-revalidate=7200'
+  )
+
   return {
     props: {
       origin: origin
