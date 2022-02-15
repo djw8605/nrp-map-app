@@ -17,6 +17,10 @@ function numberWithCommas(x) {
 
 }
 
+function convertWithK(x) {
+  return (x.toFixed()/1000).toFixed().toString() + 'k';
+}
+
 export default function LiveMetrics() {
   const [coreHours, setCoreHours] = useState(0);
   var coreHoursRate = 28000;
@@ -102,7 +106,7 @@ function LiveMetricRate(props) {
             {props.rate ? (
               <>
                 <div class="col-4 text-right">
-                  <span><FontAwesomeIcon icon={faArrowUp} />~{numberWithCommas(props.rate)}/day</span>
+                  <span><FontAwesomeIcon icon={faArrowUp} />~{convertWithK(props.rate)}/day</span>
                 </div>
               </>
             ) : (
