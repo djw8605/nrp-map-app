@@ -29,17 +29,19 @@ export default function LiveMetrics() {
   var loading = true;
   const { data, error } = GetProjects();
   if (data) {
+    var organizations = new Set();
     // Loop through the projects and get the total number of hours
     // and the total number of organizations
     var totalCoreHours = 0;
     data.projects.map((project) => {
       totalCoreHours += project.usage;
-      totalOrganizations += 1;
+      organizations.add(project.organization);
     });
 
     if (coreHours === 0) {
       setCoreHours(totalCoreHours);
     }
+    totalOrganizations = organizations.size
     totalProjects = data.projects.length;
     loading = false;
   }
