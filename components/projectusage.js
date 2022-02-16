@@ -69,7 +69,7 @@ class ProjectUsage extends React.Component {
         <table className="table table-striped table-sm">
           <thead>
             <tr>
-              <th>Project</th>
+              <th>OSG Project</th>
               <th className="text-right">Core Hours</th>
             </tr>
           </thead>
