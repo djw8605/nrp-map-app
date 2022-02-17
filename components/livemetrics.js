@@ -107,7 +107,7 @@ function LiveMetricRate(props) {
             </div>
             {props.rate ? (
               <>
-                <div class="col-4 text-right">
+                <div className="col-4 text-right">
                   <span><FontAwesomeIcon icon={faArrowUp} />~{convertWithK(props.rate)}/day</span>
                 </div>
               </>
