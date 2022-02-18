@@ -21,13 +21,15 @@ function convertWithK(x) {
   return (x.toFixed()/1000).toFixed().toString() + 'k';
 }
 
+var coreHoursFromWeb = 0;
 export default function LiveMetrics() {
   const [coreHours, setCoreHours] = useState(0);
-  var coreHoursRate = 28000;
+  const [ coreHoursRate, setCoreHoursRate ] = useState(0.08);
   var totalProjects = 0;
   var totalOrganizations = 0;
   var loading = true;
   const { data, error } = GetProjects();
+  const { data: rateData, error: rateError } = GetCoreHoursRate();
   if (data) {
     var organizations = new Set();
     // Loop through the projects and get the total number of hours
@@ -38,27 +40,39 @@ export default function LiveMetrics() {
       organizations.add(project.organization);
     });
 
-    if (coreHours === 0) {
+    if (totalCoreHours.toFixed() != coreHoursFromWeb.toFixed()) {
       setCoreHours(totalCoreHours);
+      coreHoursFromWeb = coreHours;
     }
     totalOrganizations = organizations.size
     totalProjects = data.projects.length;
     loading = false;
   }
 
+  if (rateData) {
+    var newCoreHoursRate = rateData.corehoursrate;
+    // Check if the rate changed
+    if (newCoreHoursRate.toFixed(4) != coreHoursRate.toFixed(4)) {
+      setCoreHoursRate(newCoreHoursRate);
+      if (rateInterval > 0) {
+        clearInterval(rateInterval);
+      }
+      rateInterval = setInterval(() => {
+        setCoreHours((coreHours) => {
+          if (coreHours > 0) coreHours += 1
+          return coreHours;
+        });
+      }, (1/newCoreHoursRate) * 1000);
+
+    }
+  }
+
   useEffect(() => {
-    // Update the number of core hours as if GP-ARGO is
-    // running 200k core hours a day.
-    // Per-second calculation:
-    // 200k core hours / (60 seconds * 60 minutes * 24 hours)
-    const interval = setInterval(() => {
-      setCoreHours((coreHours) => {
-        if (coreHours > 0) coreHours += 1
-        return coreHours;
-      });
-    }, (1 / (coreHoursRate / (60 * 60 * 24))) * 1000);
+    // Clean up the rate interval
     return () => {
-      clearInterval(interval);
+      if (rateInterval > 0) {
+        clearInterval(rateInterval);
+      }
     }
   }, []);
 
@@ -67,7 +81,7 @@ export default function LiveMetrics() {
   return (
     <>
       <div className='col-md-4'>
-        <LiveMetricRate title='Core Hours Contributed' rate={coreHoursRate} loading={loading} value={coreHours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
+        <LiveMetricRate title='Core Hours Contributed' rate={coreHoursRate * 3600 * 24} loading={loading} value={coreHours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
       </div>
       <div className='col-md-4'>
         <LiveMetricRate title='OSG Projects' value={totalProjects} loading={loading} colorScheme="l-bg-cherry" icon={faUserGroup} />

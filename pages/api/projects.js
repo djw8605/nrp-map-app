@@ -87,6 +87,6 @@ export default async function handler(req, res) {
     }
   });
   res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate')
-  res.status(200).json({ projects: projects });
+  res.status(200).json({ projects: projects, updateTime: Date.now() });
 
 }
