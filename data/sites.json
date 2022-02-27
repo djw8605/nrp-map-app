@@ -72,6 +72,13 @@
         "logo": "/images/langston.png",
         "lat": 35.94624880950671, 
         "log": -97.26299283274462
+      },
+      {
+        "name": "Creighton University",
+        "url": "https://www.creighton.edu/",
+        "logo": "/images/cu.svg",
+        "lat": 41.26571336798941,
+        "log":  -95.9463325580878
       }
 
 
