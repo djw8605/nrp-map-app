@@ -1,14 +1,19 @@
 import Head from 'next/head'
 import Footer from '../components/footer'
 import NavBar from '../components/navbar'
-import Map from '../components/map'
+//import Map from '../components/map'
 import SiteList from '../components/sitelist'
 import ProjectUsage from '../components/projectusage'
 import { Wrapper } from "@googlemaps/react-wrapper";
 import LiveMetrics from '../components/livemetrics'
 
+import dynamic from 'next/dynamic'
 
 export default function Home() {
+  const Map = dynamic(
+    () => import('../components/map'), // replace '@components/map' with your component's location
+    { ssr: false } // This line is important. It's what prevents server-side render
+  )
   return (
     <>
       <Head>

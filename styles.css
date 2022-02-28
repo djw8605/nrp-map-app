@@ -1,5 +1,6 @@
-#map {
+.map {
     height: 400px;
+    width: 100%;
     color: #000;
 }
 
