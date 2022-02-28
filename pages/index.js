@@ -4,7 +4,6 @@ import NavBar from '../components/navbar'
 //import Map from '../components/map'
 import SiteList from '../components/sitelist'
 import ProjectUsage from '../components/projectusage'
-import { Wrapper } from "@googlemaps/react-wrapper";
 import LiveMetrics from '../components/livemetrics'
 
 import dynamic from 'next/dynamic'
@@ -50,9 +49,7 @@ export default function Home() {
 
             </div>
             <div className='col-md-6'>
-              <Wrapper apiKey={process.env.NEXT_PUBLIC_MAPS_KEY}>
-                <Map />
-              </Wrapper>
+              <Map />
 
             </div>
           </div>
