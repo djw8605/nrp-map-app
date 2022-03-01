@@ -79,7 +79,22 @@
         "logo": "/images/cu.svg",
         "lat": 41.26571336798941,
         "log":  -95.9463325580878
+      },
+      {
+        "name": "Dakota State University",
+        "url": "https://dsu.edu/",
+        "logo": "/images/dsu.png",
+        "lat": 44.01268192341067,
+        "log": -97.11035107297302
+      },
+      {
+        "name": "University of Arkansas",
+        "url": "https://www.uark.edu/",
+        "logo": "/images/uark.svg",
+        "lat": 36.0686201021275,
+        "log": -94.1758126974506
       }
+
 
 
     ]
