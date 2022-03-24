@@ -93,6 +93,13 @@
         "logo": "/images/uark.svg",
         "lat": 36.0686201021275,
         "log": -94.1758126974506
+      },
+      {
+        "name": "Wichita State University",
+        "url": "https://www.wichita.edu/",
+        "logo": "/images/wsu.png",
+        "lat": 37.71864516654194,
+        "log": -97.29411994426366
       }
 
 
