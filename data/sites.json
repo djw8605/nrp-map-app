@@ -100,6 +100,13 @@
         "logo": "/images/wsu.png",
         "lat": 37.71864516654194,
         "log": -97.29411994426366
+      },
+      {
+        "name": "Arkansas State University",
+        "url": "https://www.astate.edu/",
+        "logo": "/images/astate.png",
+        "lat": 35.843146959474225,
+        "log": -90.67560992059596
       }
 
 
