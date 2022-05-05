@@ -107,6 +107,13 @@
         "logo": "/images/astate.png",
         "lat": 35.843146959474225,
         "log": -90.67560992059596
+      },
+      {
+        "name": "KanREN",
+        "url": "https://www.kanren.net/",
+        "logo": "/images/kanren.png",
+        "lat": 38.416395122763326,
+        "log": -96.17927150198692
       }
 
 
