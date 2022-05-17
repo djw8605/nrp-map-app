@@ -13,7 +13,7 @@ export default async function handler(req, res) {
           "filter": [
             {
               "term": {
-                "OIM_Site": "GP-ARGO"
+                "OIM_Facility": "Great Plains Network"
               }
             },
             {
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
             {
               "range": {
                 "EndTime": {
-                  "gte": "now-30d",
+                  "gte": "now-1y",
                   "lt": "now"
                 }
               }
