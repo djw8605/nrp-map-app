@@ -23,8 +23,8 @@ function convertWithK(x) {
 
 var coreHoursFromWeb = 0;
 export default function LiveMetrics() {
-  const [coreHours, setCoreHours] = useState(0);
-  const [ coreHoursRate, setCoreHoursRate ] = useState(0.08);
+  const [coreHours, setCoreHours] = useState({'corehours': 0, 'gpuhours': 0});
+  const [ coreHoursRate, setCoreHoursRate ] = useState({'corehours': 0, 'gpuhours': 0});
   var totalProjects = 0;
   var totalOrganizations = 0;
   var loading = true;
@@ -35,14 +35,16 @@ export default function LiveMetrics() {
     // Loop through the projects and get the total number of hours
     // and the total number of organizations
     var totalCoreHours = 0;
+    var totalGPUHours = 0;
     data.projects.map((project) => {
       totalCoreHours += project.usage;
+      totalGPUHours += project.gpuhours;
       organizations.add(project.organization);
     });
 
     if (totalCoreHours.toFixed() != coreHoursFromWeb.toFixed()) {
-      setCoreHours(totalCoreHours);
-      coreHoursFromWeb = coreHours;
+      setCoreHours({'corehours': totalCoreHours, 'gpuhours': totalGPUHours});
+      coreHoursFromWeb = coreHours.corehours;
     }
     totalOrganizations = organizations.size
     totalProjects = data.projects.length;
@@ -51,15 +53,18 @@ export default function LiveMetrics() {
 
   if (rateData) {
     var newCoreHoursRate = rateData.corehoursrate;
+    var newGpuHoursRate = rateData.gpuhoursrate;
     // Check if the rate changed
-    if (newCoreHoursRate.toFixed(4) != coreHoursRate.toFixed(4)) {
-      setCoreHoursRate(newCoreHoursRate);
+    if (newCoreHoursRate.toFixed(4) != coreHoursRate.corehours.toFixed(4)) {
+      setCoreHoursRate({'corehours': newCoreHoursRate, 'gpuhours': newGpuHoursRate});
       if (rateInterval > 0) {
         clearInterval(rateInterval);
       }
       rateInterval = setInterval(() => {
         setCoreHours((coreHours) => {
-          if (coreHours > 0) coreHours += 1
+          
+          if (coreHours.corehours > 0) coreHours.corehours += 1;
+          if (coreHours.gpuhours > 0) coreHours.gpuhours += 1;
           return coreHours;
         });
       }, (1/newCoreHoursRate) * 1000);
@@ -81,10 +86,10 @@ export default function LiveMetrics() {
   return (
     <>
       <div className='col-md-4'>
-        <LiveMetricRate title='Core Hours Contributed' rate={coreHoursRate * 3600 * 24} loading={loading} value={coreHours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
+        <LiveMetricRate title='Core Hours Contributed' rate={coreHoursRate.corehours * 3600 * 24} loading={loading} value={coreHours.corehours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
       </div>
       <div className='col-md-4'>
-        <LiveMetricRate title='OSG Projects' value={totalProjects} loading={loading} colorScheme="l-bg-cherry" icon={faUserGroup} />
+        <LiveMetricRate title='GPU Hours Contributed' rate={coreHoursRate.gpuhours * 3600 * 24} value={coreHours.gpuhours} loading={loading} colorScheme="l-bg-cherry" icon={faUserGroup} />
       </div>
       <div className='col-md-4'>
         <LiveMetricRate title='Institutions Supported' value={totalOrganizations} loading={loading} colorScheme="l-bg-cyan" icon={faBuildingColumns} />

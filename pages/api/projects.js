@@ -14,7 +14,7 @@ export default async function handler(req, res) {
           "filter": [
             {
               "term": {
-                "OIM_Facility": "Great Plains Network"
+                "OIM_ResourceGroup": "SDSC-PRP"
               }
             },
             {
@@ -58,6 +58,11 @@ export default async function handler(req, res) {
                       "sum": {
                         "field": "CoreHours"
                       }
+                    },
+                    "GPUHours": {
+                      "sum": {
+                        "field": "GPUHours"
+                      }
                     }
                   }
                 }
@@ -80,6 +85,7 @@ export default async function handler(req, res) {
         'organization': bucket.OIM_Organization.buckets[0].key,
         'fieldofscience': bucket.OIM_Organization.buckets[0].OIM_FieldOfScience.buckets[0].key,
         'usage': bucket.OIM_Organization.buckets[0].OIM_FieldOfScience.buckets[0].CoreHours.value,
+        'gpuhours': bucket.OIM_Organization.buckets[0].OIM_FieldOfScience.buckets[0].GPUHours.value
       };
       projects.push(project);
     } catch (e) {

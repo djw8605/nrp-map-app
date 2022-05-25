@@ -12,11 +12,11 @@ thead {
 }
 
 nav {
-    background-color: #013220;
+    background-color: #000033;
 }
 
 .footer {
-    background-color: #013220;
+    background-color: #000033;
     color: #fff;
 }
 
@@ -25,7 +25,7 @@ nav {
 }
 
 section.top-section {
-    background-color: #013220;
+    background-color: #000033;
     color: #fff;
     padding-bottom: 2em;
     margin-bottom: 1em;
@@ -37,7 +37,7 @@ section.top-section {
 
 .card.livemetrics {
     text-align: center;
-    background-color: #013220;
+    background-color: #000033;
 }
 /*
 .vertical-center {

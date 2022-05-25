@@ -12,7 +12,7 @@ export default function Footer() {
         <footer className="d-flex flex-wrap justify-content-between align-items-center py-3">
           <div className="col-md-12 align-items-center">
 
-            <span>GP-ARGO</span>
+            <span>National Research Platform</span>
             <span className="float-end">Last Updated at: { dateString + " " + timeString}</span>
           </div>
           {/*

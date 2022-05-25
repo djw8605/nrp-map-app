@@ -32,6 +32,7 @@ function Projects() {
 
             </td>
             <td align="right">{numberWithCommas(project.usage.toFixed())}</td>
+            <td align="right">{numberWithCommas(project.gpuhours.toFixed())}</td>
           </tr>
         )
       })
@@ -71,6 +72,7 @@ class ProjectUsage extends React.Component {
             <tr>
               <th>OSG Project</th>
               <th className="text-right">Core Hours</th>
+              <th className="text-right">GPU Hours</th>
             </tr>
           </thead>
           <tbody>
