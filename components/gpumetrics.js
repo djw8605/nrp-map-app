@@ -13,13 +13,13 @@ const prom = new PrometheusDriver({
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
-const setupGraph = (series, dom_id, title, background) => {
+const setupGraph = (series, dom_id, title, background, showgraph = true) => {
   // set the dimensions and margins of the graph
   var margin = { top: 20, right: 20, bottom: 30, left: 50 },
     width = 500,
     height = 150;
-  
-  series.forEach(function(d) {
+
+  series.forEach(function (d) {
     d.time = d3.isoParse(d.time);
   });
 
@@ -53,56 +53,60 @@ const setupGraph = (series, dom_id, title, background) => {
   // scale the range of the data
   x.domain(d3.extent(series, function (d) { return d.time; }));
   //y.domain([0, d3.max(series, function (d) { return d.value; })]);
-  y.domain([d3.min(series, d => d.value), d3.max(series, d => d.value) * 1.5]);
+  y.domain([d3.min(series, d => d.value), d3.max(series, d => d.value) * 1]);
 
-  // add the area
-  svg.append("path")
-    .data([series])
-    .attr("class", "area")
-    .attr("d", area);
+  if (showgraph) {
+    // add the area
+    svg.append("path")
+      .data([series])
+      .attr("class", "area")
+      .attr("d", area);
 
-  // add the valueline path.
-  svg.append("path")
-    .data([series])
-    .attr("class", "line")
-    .attr("d", valueline);
+    // add the valueline path.
+    svg.append("path")
+      .data([series])
+      .attr("class", "line")
+      .attr("d", valueline);
+  }
+
+
 
   if (series.length != 0) {
-  const textElement = svg.append('text')
-    .text(series[series.length - 1].value.toFixed())
-    .attr('x', width / 2)
-    .attr('y', height / 2)
-    .attr('text-anchor', 'middle')
-    .attr('alignment-baseline', 'central')
-    .attr('font-size', '3em')
-    .attr('font-weight', 'bold')
-    .attr('fill', '#000');
+    const textElement = svg.append('text')
+      .text(series[series.length - 1].value.toFixed())
+      .attr('x', width / 2)
+      .attr('y', height / 2)
+      .attr('text-anchor', 'middle')
+      .attr('alignment-baseline', 'central')
+      .attr('font-size', '3em')
+      .attr('font-weight', 'bold')
+      .attr('fill', '#000');
   } else {
     // Loading...
     const textElement = svg.append('text')
-    .text("Loading...")
-    .attr('x', width / 2)
-    .attr('y', height / 2)
-    .attr('text-anchor', 'middle')
-    .attr('alignment-baseline', 'central')
-    .attr('font-size', '3em')
-    .attr('font-weight', 'bold')
-    .attr('fill', '#000');
+      .text("Loading...")
+      .attr('x', width / 2)
+      .attr('y', height / 2)
+      .attr('text-anchor', 'middle')
+      .attr('alignment-baseline', 'central')
+      .attr('font-size', '3em')
+      .attr('font-weight', 'bold')
+      .attr('fill', '#000');
 
     svg.append('g')
-    .attr('transform', 'scale(0.6, 0.6)')
-    .append('path')
-    .attr('fill', '#000')
-    .attr('d', "M73,50c0-12.7-10.3-23-23-23S27,37.3,27,50 M30.9,50c0-10.5,8.5-19.1,19.1-19.1S69.1,39.5,69.1,50")
-    .attr('x', 0)
-    .attr('y', 0)
-    .append('animateTransform')
-    .attr('attributeName', 'transform')
-    .attr('type', 'rotate')
-    .attr('from', '0 50 50')
-    .attr('to', '360 50 50')
-    .attr('dur', '1s')
-    .attr('repeatCount', 'indefinite');
+      .attr('transform', 'scale(0.6, 0.6)')
+      .append('path')
+      .attr('fill', '#000')
+      .attr('d', "M73,50c0-12.7-10.3-23-23-23S27,37.3,27,50 M30.9,50c0-10.5,8.5-19.1,19.1-19.1S69.1,39.5,69.1,50")
+      .attr('x', 0)
+      .attr('y', 0)
+      .append('animateTransform')
+      .attr('attributeName', 'transform')
+      .attr('type', 'rotate')
+      .attr('from', '0 50 50')
+      .attr('to', '360 50 50')
+      .attr('dur', '1s')
+      .attr('repeatCount', 'indefinite');
 
   }
 
@@ -121,7 +125,7 @@ const setupGraph = (series, dom_id, title, background) => {
 
 export function GPUMetrics() {
 
-  const {data, error} = useSWR('/api/prommetrics?query=gpumetrics', fetcher, { refreshInterval: 3600000 });
+  const { data, error } = useSWR('/api/prommetrics?query=gpumetrics', fetcher, { refreshInterval: 3600000 });
   const chart = useRef(null);
   if (data) {
     chart.current.innerHTML = '';
@@ -130,7 +134,7 @@ export function GPUMetrics() {
     setupGraph(data.values, '#gpumetrics', 'GPUs Allocated', "l-bg-orange");
   } else {
     // Loading state
-   
+
   }
 
   useEffect(() => {
@@ -155,25 +159,25 @@ export function GPUMetrics() {
 
 export function CPUMetrics() {
 
-  const {data, error} = useSWR('/api/prommetrics?query=cpumetrics', fetcher, { refreshInterval: 3600000 });
+  const { data, error } = useSWR('/api/prommetrics?query=numpods', fetcher, { refreshInterval: 3600000 });
   const chart = useRef(null);
   if (data) {
     chart.current.innerHTML = '';
     console.log("Got data from api");
     console.log(data);
-    setupGraph(data.values, '#cpumetrics', 'CPUs Allocated', "l-bg-green");
+    setupGraph(data.values, '#runningpods', 'Running Pods', "l-bg-green");
   }
 
   useEffect(() => {
     chart.current.innerHTML = '';
-    setupGraph([], '#cpumetrics', 'CPUs Allocated', "l-bg-green");
+    setupGraph([], '#runningpods', 'Running Pods', "l-bg-green");
   }, []);
 
   return (
     <>
       <div className='col-md-4'>
         <div className='card'>
-          <div id="cpumetrics" ref={chart} />
+          <div id="runningpods" ref={chart} />
         </div>
       </div>
     </>
@@ -185,7 +189,7 @@ export function NamespaceMetrics() {
 
 
 
-  const {data, error} = useSWR('/api/prommetrics?query=namespacemetrics', fetcher, { refreshInterval: 3600000 });
+  const { data, error } = useSWR('/api/prommetrics?query=namespacemetrics', fetcher, { refreshInterval: 3600000 });
   const chart = useRef(null);
   if (data) {
     chart.current.innerHTML = '';
