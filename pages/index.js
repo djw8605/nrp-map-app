@@ -7,6 +7,7 @@ import ProjectUsage from '../components/projectusage'
 import LiveMetrics from '../components/livemetrics'
 
 import dynamic from 'next/dynamic'
+import {GPUMetrics, CPUMetrics, NamespaceMetrics} from '../components/gpumetrics'
 
 export default function Home() {
   const Map = dynamic(
@@ -68,8 +69,14 @@ export default function Home() {
                 Resources contributed to the <a href="https://opensciencegrid.org">Open Science Grid</a>
               </h3>
             </div>
-            <LiveMetrics />
+            
 
+
+          </div>
+          <div className='row'>
+          <GPUMetrics />
+          <CPUMetrics />
+          <NamespaceMetrics />
           </div>
         </div>
       </section>
