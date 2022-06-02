@@ -7,7 +7,7 @@ import ProjectUsage from '../components/projectusage'
 import LiveMetrics from '../components/livemetrics'
 
 import dynamic from 'next/dynamic'
-import {GPUMetrics, CPUMetrics, NamespaceMetrics} from '../components/gpumetrics'
+import { GPUMetrics, CPUMetrics, NamespaceMetrics } from '../components/gpumetrics'
 
 export default function Home() {
   const Map = dynamic(
@@ -47,7 +47,7 @@ export default function Home() {
                   <a className="btn btn-success fs-3 mb-3" href="https://docs.pacificresearchplatform.org/userdocs/start/get-access/">Get Access</a>
                   <br />
                   <a className="btn btn-primary fs-3" href="https://docs.pacificresearchplatform.org/admindocs/participating/new-contributor-guide/">Add a server to the NRP</a>
-                  
+
 
                 </div>
               </div>
@@ -62,26 +62,22 @@ export default function Home() {
       </section>
       <section>
         <div className='container'>
-
+          <div className='row'>
+            <GPUMetrics />
+            <CPUMetrics />
+            <NamespaceMetrics />
+          </div>
+        </div>
+      </section>
+      <section className='middle-section'>
+        <div className="container">
           <div className='row'>
             <div className='col-md-12 '>
               <h3 className='text-center'>
                 Resources contributed to the <a href="https://opensciencegrid.org">Open Science Grid</a>
               </h3>
             </div>
-            
-
-
           </div>
-          <div className='row'>
-          <GPUMetrics />
-          <CPUMetrics />
-          <NamespaceMetrics />
-          </div>
-        </div>
-      </section>
-      <section className='middle-section'>
-        <div className="container">
           <div className='row'>
             <div className='col-md-4'>
               {/* <SiteList /> */}

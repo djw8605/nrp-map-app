@@ -67,6 +67,7 @@ const setupGraph = (series, dom_id, title, background) => {
     .attr("class", "line")
     .attr("d", valueline);
 
+  if (series.length != 0) {
   const textElement = svg.append('text')
     .text(series[series.length - 1].value.toFixed())
     .attr('x', width / 2)
@@ -76,6 +77,34 @@ const setupGraph = (series, dom_id, title, background) => {
     .attr('font-size', '3em')
     .attr('font-weight', 'bold')
     .attr('fill', '#000');
+  } else {
+    // Loading...
+    const textElement = svg.append('text')
+    .text("Loading...")
+    .attr('x', width / 2)
+    .attr('y', height / 2)
+    .attr('text-anchor', 'middle')
+    .attr('alignment-baseline', 'central')
+    .attr('font-size', '3em')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#000');
+
+    svg.append('g')
+    .attr('transform', 'scale(0.6, 0.6)')
+    .append('path')
+    .attr('fill', '#000')
+    .attr('d', "M73,50c0-12.7-10.3-23-23-23S27,37.3,27,50 M30.9,50c0-10.5,8.5-19.1,19.1-19.1S69.1,39.5,69.1,50")
+    .attr('x', 0)
+    .attr('y', 0)
+    .append('animateTransform')
+    .attr('attributeName', 'transform')
+    .attr('type', 'rotate')
+    .attr('from', '0 50 50')
+    .attr('to', '360 50 50')
+    .attr('dur', '1s')
+    .attr('repeatCount', 'indefinite');
+
+  }
 
   const titleElement = svg.append('text')
     .text(title)
@@ -99,7 +128,16 @@ export function GPUMetrics() {
     console.log("Got data from api");
     console.log(data);
     setupGraph(data.values, '#gpumetrics', 'GPUs Allocated', "l-bg-orange");
+  } else {
+    // Loading state
+   
   }
+
+  useEffect(() => {
+    chart.current.innerHTML = '';
+    setupGraph([], '#gpumetrics', 'GPUs Allocated', "l-bg-orange");
+  }, []);
+
 
 
 
@@ -126,6 +164,11 @@ export function CPUMetrics() {
     setupGraph(data.values, '#cpumetrics', 'CPUs Allocated', "l-bg-green");
   }
 
+  useEffect(() => {
+    chart.current.innerHTML = '';
+    setupGraph([], '#cpumetrics', 'CPUs Allocated', "l-bg-green");
+  }, []);
+
   return (
     <>
       <div className='col-md-4'>
@@ -150,6 +193,11 @@ export function NamespaceMetrics() {
     console.log(data);
     setupGraph(data.values, '#namespacemetrics', 'Active Research Groups', "l-bg-cyan");
   }
+
+  useEffect(() => {
+    chart.current.innerHTML = '';
+    setupGraph([], '#namespacemetrics', 'Active Research Groups', "l-bg-cyan");
+  }, []);
 
   return (
     <>
