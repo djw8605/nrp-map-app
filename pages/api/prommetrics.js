@@ -1,4 +1,5 @@
 import { PrometheusDriver } from 'prometheus-query';
+import jayson from 'jayson';
 
 const prom = new PrometheusDriver({
   endpoint: "https://thanos.nrp-nautilus.io/",
@@ -18,7 +19,7 @@ export default async function handler(req, res) {
 
   var pomQuery = ""
   if (query == "gpumetrics") {
-    pomQuery = 'count(pod_gpus)';
+    pomQuery = ' count (DCGM_FI_DEV_GPU_TEMP{exported_namespace!=""} * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:)';
   } else if (query == "numpods") {
     pomQuery = 'count(kube_pod_info)';
     //pomQuery = 'sum(kube_node_status_capacity{resource="cpu"})';
@@ -29,7 +30,7 @@ export default async function handler(req, res) {
   const start = new Date().getTime() - 24 * 60 * 60 * 1000;
   const end = new Date();
   const step = 60 * 15;
-  prom.rangeQuery(pomQuery, start, end, step);
+  //prom.rangeQuery(pomQuery, start, end, step);
   var result = null;
   try {
     result = await prom.rangeQuery(pomQuery, start, end, step);

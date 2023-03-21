@@ -72,23 +72,8 @@ export default function Home() {
       <section className='middle-section'>
         <div className="container">
           <div className='row'>
-            <div className='col-md-12 '>
-              <h3 className='text-center'>
-                Resources contributed to the <a href="https://opensciencegrid.org">Open Science Grid</a>
-              </h3>
-            </div>
-          </div>
-          <div className='row'>
-            <div className='col-md-4'>
-              {/* <SiteList /> */}
-            </div>
-            <div className='col-md-4'>
+            <div className='col-md-8'>
               <ProjectUsage />
-            </div>
-            <div className='col-md-4'>
-              <div className='embed-responsive embed-responsive-16by9'>
-                <iframe className='embed-responsive-item' src="https://gracc.opensciencegrid.org/d-solo/000000037/payload-jobs-summary?orgId=1&var-ReportableVOName=All&var-Project=All&var-Facility=All&var-User=All&var-ExitCode=All&var-Probe=All&var-interval=1d&var-Filters=OIM_ResourceGroup%7C%3D%7CSDSC-PRP&from=1637873439305&to=1653511839305&panelId=2" width="100%" height="250" frameborder="1"></iframe>
-              </div>
             </div>
           </div>
         </div>
