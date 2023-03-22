@@ -8,12 +8,12 @@ export default function Footer() {
 
   return (
     <section className="footer">
-      <div className="container">
+      <div className="container mx-auto">
         <footer className="d-flex flex-wrap justify-content-between align-items-center py-3">
           <div className="col-md-12 align-items-center">
 
             <span>National Research Platform</span>
-            <span className="float-end">Last Updated at: { dateString + " " + timeString}</span>
+            <span className="float-right">Last Updated at: { dateString + " " + timeString}</span>
           </div>
           {/*
         <ul class="nav col-md-4 justify-content-end list-unstyled d-flex">
