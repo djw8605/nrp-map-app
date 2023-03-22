@@ -1,6 +1,7 @@
 import React from "react";
 import { GetNamespaces, GetNamespaceUsage } from "./gatherdata";
 import DataTable from 'react-data-table-component';
+import { useState } from "react";
 
 function numberWithCommas(x) {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -8,18 +9,18 @@ function numberWithCommas(x) {
 
 function ExpandedRow({ data }) {
   return (
-    <div className='fs-9'>
+    <div className='p-2 flex flex-col text-xs'>
       <div>
-        <span className='fw-bold'>Namespace:</span> {data.Name}
+        <span className='font-bold'>Namespace:</span> {data.Name}
       </div>
       <div>
-        <span className='fw-bold'>Institution:</span> {data.Institution}
+        <span className='font-bold'>Institution:</span> {data.Institution}
       </div>
       <div>
-        <span className='fw-bold'>Description:</span> {data.Description}
+        <span className='font-bold'>Description:</span> {data.Description}
       </div>
       <div>
-        <span className='fw-bold'>Software:</span> {data.Software}
+        <span className='font-bold'>Software:</span> {data.Software}
       </div>
     </div>
   );
@@ -47,7 +48,7 @@ function DataTableLoading() {
   )
 }
 
-function Projects() {
+function Projects({ setSelectedNamespace }) {
   //const { data, error } = GetProjects();
   const namespace_info = GetNamespaces();
   const namespace_usage = GetNamespaceUsage();
@@ -139,6 +140,7 @@ function Projects() {
   // <td align="right">{numberWithCommas(project.usage.toFixed())}</td>
   // <td align="right">{numberWithCommas(project.gpuhours.toFixed())}</td>
   //               <div className="fieldofscience">{namespace.Description}</div>
+  // expandOnRowClicked
   return (
     <>
       <DataTable
@@ -149,8 +151,8 @@ function Projects() {
         highlightOnHover
         striped
         responsive
-        expandableRows
-        expandableRowsComponent={ExpandedRow}
+        onRowClicked={row => setSelectedNamespace(row)}
+        pointerOnHover
         progressPending={namespace_info.data == undefined || namespace_usage.data == undefined}
         progressComponent={DataTableLoading()}
         dense
@@ -161,33 +163,60 @@ function Projects() {
   )
 }
 
+function NamespaceDescription({ namespace }) {
 
-class ProjectUsage extends React.Component {
-  constructor(props) {
-    super(props);
-    // Read in the JSON file
-    this.state = {
-      projects: [],
-    }
-  }
-
-
-  render() {
+  if (namespace == undefined) {
     return (
       <>
-        <div className="table-scroll">
 
-          <Projects />
+        <div className="text-2xl font-bold mt-6">
+          Select a namespace to the left
         </div>
-        <style jsx>{`
-        .table-scroll {
-          max-height: 600px;
-          overflow-y: scroll;
-        }
-        `}</style>
       </>
     )
   }
+  return (
+    <>
+      <div className="border border-gray-400 m-4 rounded p-4 mt-6">
+        <div className="text-2xl">
+          <span className="font-bold">Namespace:</span> {namespace.Name}
+        </div>
+        <div className="mt-4">
+          <span className="font-bold">Description: </span>{namespace.Description}
+        </div>
+        <div className="mt-4">
+          <span className="font-bold">Institution: </span>{namespace.Institution}
+        </div>
+        <div className="mt-4">
+          <span className="font-bold">Software: </span>{namespace.Software}
+        </div>
+      </div>
+
+    </>
+  )
+}
+
+
+function ProjectUsage() {
+
+  const [selectedNamespace, setSelectedNamespace] = useState(null);
+
+
+  return (
+    <>
+      <div className="container mx-auto">
+        <div className='grid grid-cols-2 gap-4'>
+          <div>
+            <Projects setSelectedNamespace={setSelectedNamespace} />
+          </div>
+          <div>
+            <NamespaceDescription namespace={selectedNamespace} />
+          </div>
+        </div>
+      </div>
+    </>
+  )
+
 }
 
 

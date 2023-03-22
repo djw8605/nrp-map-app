@@ -22,47 +22,43 @@ export default function Home() {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@DerekWeitzel" />
         <meta name="twitter:creator" content="@DerekWeitzel" />
-        <meta name="twitter:title" content="The Great Plains Augmented Regional Gateway to the Open Science Grid
-" />
-        <meta name="twitter:description" content="GP-ARGO creates a regional distributed Open Science Grid (OSG) Gateway led by the Great Plains Network (GPN) to support computational and data-intensive research across the region through the development of specialized CI resources, workforce training, and cross-support methodologies and agreements." />
+        <meta name="twitter:title" content="National Research Platform" />
+        <meta name="twitter:description" content="The National Research Platform is a partnership of more than 50 institutions, led by researchers at
+                UC San Diego, University of Nebraska-Lincoln, and UC Berkeley and includes the National Science Foundation, Department of Energy,
+                and multiple research universities in the US and around the world." />
         <meta name="twitter:image" content="https://gp-argo.greatplains.net/twitter-card.png" />
       </Head>
       <NavBar></NavBar>
 
 
       <section className='top-section'>
-        <div className="container">
-          <div className='row'>
-            <div className='col-md-5'>
-              <div className='row'>
-                <div className='col-md-12'>
-                  <h1 className='mb-4'>
-                    National Research Platform
-                  </h1>
-                  <p className='mb-4'>
-                    The National Research Platform is a partnership of more than 50 institutions, led by researchers at
-                    UC San Diego, University of Nebraska-Lincoln, and UC Berkeley and includes the National Science Foundation, Department of Energy,
-                    and multiple research universities in the US and around the world.
-                  </p>
-                  <a className="btn btn-success fs-3 mb-3" href="https://docs.pacificresearchplatform.org/userdocs/start/get-access/">Get Access</a>
-                  <br />
-                  <a className="btn btn-primary fs-3" href="https://docs.pacificresearchplatform.org/admindocs/participating/new-contributor-guide/">Add a server to the NRP</a>
+        <div className="container mx-auto">
+          <div className='grid grid-cols-12 gap-4'>
+            <div className='col-span-5'>
+              <h1 className='mb-4 font-bold text-4xl'>
+                National Research Platform
+              </h1>
+              <p className='mb-4'>
+                The National Research Platform is a partnership of more than 50 institutions, led by researchers at
+                UC San Diego, University of Nebraska-Lincoln, and UC Berkeley and includes the National Science Foundation, Department of Energy,
+                and multiple research universities in the US and around the world.
+              </p>
 
+              <div className='grid grid-cols-2 gap-4 mt-10'>
+                <a className="rounded-md bg-green-600 p-3 text-xl text-center" href="https://docs.pacificresearchplatform.org/userdocs/start/get-access/">Get Access</a>
+                <a className="rounded-md bg-orange-600 p-3 text-xl text-center" href="https://docs.pacificresearchplatform.org/admindocs/participating/new-contributor-guide/">Add a server to the NRP</a>
 
-                </div>
               </div>
-
             </div>
-            <div className='col-md-7'>
+            <div className='col-span-7'>
               <Map />
-
             </div>
           </div>
         </div>
-      </section>
+      </section >
       <section>
-        <div className='container'>
-          <div className='row'>
+        <div className='container mx-auto'>
+          <div className='grid grid-cols-3 gap-4'>
             <GPUMetrics />
             <CPUMetrics />
             <NamespaceMetrics />
@@ -70,13 +66,7 @@ export default function Home() {
         </div>
       </section>
       <section className='middle-section'>
-        <div className="container">
-          <div className='row'>
-            <div className='col-md-8'>
-              <ProjectUsage />
-            </div>
-          </div>
-        </div>
+        <ProjectUsage />
       </section>
 
       <Footer></Footer>
