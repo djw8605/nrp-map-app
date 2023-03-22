@@ -33,8 +33,8 @@ export default function Home() {
 
       <section className='top-section'>
         <div className="container mx-auto">
-          <div className='grid grid-cols-12 gap-4'>
-            <div className='col-span-5'>
+          <div className='grid md:grid-cols-12 grid-cols-1 md:gap-4'>
+            <div className='col-span-5 mb-4 md:mb-0'>
               <h1 className='mb-4 font-bold text-4xl'>
                 National Research Platform
               </h1>
@@ -44,7 +44,7 @@ export default function Home() {
                 and multiple research universities in the US and around the world.
               </p>
 
-              <div className='grid grid-cols-2 gap-4 mt-10'>
+              <div className='grid sm:grid-cols-2 grid-cols-1 gap-4 mt-10'>
                 <a className="rounded-md bg-green-600 p-3 text-xl text-center" href="https://docs.pacificresearchplatform.org/userdocs/start/get-access/">Get Access</a>
                 <a className="rounded-md bg-orange-600 p-3 text-xl text-center" href="https://docs.pacificresearchplatform.org/admindocs/participating/new-contributor-guide/">Add a server to the NRP</a>
 
@@ -58,7 +58,7 @@ export default function Home() {
       </section >
       <section>
         <div className='container mx-auto'>
-          <div className='grid grid-cols-3 gap-4'>
+          <div className='grid md:grid-cols-3 grid-cols-1 gap-4'>
             <GPUMetrics />
             <CPUMetrics />
             <NamespaceMetrics />
