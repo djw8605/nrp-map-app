@@ -2,6 +2,8 @@ import React from "react";
 import { GetNamespaces, GetNamespaceUsage } from "./gatherdata";
 import DataTable from 'react-data-table-component';
 import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 
 function numberWithCommas(x) {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -168,9 +170,8 @@ function NamespaceDescription({ namespace }) {
   if (namespace == undefined) {
     return (
       <>
-
         <div className="text-2xl font-bold mt-6">
-          Select a namespace to the left
+          Select a namespace
         </div>
       </>
     )
