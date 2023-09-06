@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
 
 
-  var gpuQuery = "count by (exported_namespace) (DCGM_FI_DEV_GPU_TEMP{exported_namespace!=\"\"})"
+  var gpuQuery = "count by (namespace) (DCGM_FI_DEV_GPU_TEMP{namespace!=\"\"})"
   var cpuQuery = "sum by (namespace) (sum by(container, pod, namespace) (kube_pod_container_resource_requests{resource=\"cpu\"})  * on(container, pod, namespace) group_right kube_pod_container_status_running)"
 
   var results = await Promise.all([
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     var cpu = results[0].result[i].value.value;
     var gpu = 0;
     for (var j = 0; j < results[1].result.length; j++) {
-      if (results[1].result[j].metric.labels.exported_namespace == ns) {
+      if (results[1].result[j].metric.labels.namespace == ns) {
         gpu = results[1].result[j].value.value;
         break;
       }

@@ -3,6 +3,7 @@ import { update } from '../redux/updateTime'
 
 export default function Footer() {
   const time = useSelector((state) => state.updateTime.value);
+  console.log("Got time from redux: " + time);
   var dateString = new Date(time).toLocaleDateString("en-US");
   var timeString = new Date(time).toLocaleTimeString("en-US");
 

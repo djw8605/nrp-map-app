@@ -2,6 +2,8 @@ import useSWR from 'swr'
 import { PrometheusDriver } from 'prometheus-query';
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { update } from '../redux/updateTime'
+import { useDispatch } from 'react-redux'
 
 
 const prom = new PrometheusDriver({
@@ -122,18 +124,43 @@ const setupGraph = (series, dom_id, title, background, showgraph = true) => {
 
 }
 
+function errorMessages(errorMsg, clickReload) {
+  return (
+    <div className='flex justify-center items-center flex-col'>
+      <div role="status" className='mt-3 flex flex-row items-center'>
+        <div>
+          <p className='text-sm font-medium text-gray-900 dark:text-white'>{errorMsg}</p>
+        </div>
+        <div className='ml-2'>
+          <div className="spinner-border spinner-border-sm" role="status">
+          </div>
+        </div>
+        <span className="sr-only">Loading...</span>
+      </div>
+      <div className='mt-3'>
+        <button onClick={() => { clickReload(); }} className='text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 mr-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800'>
+          Reload
+        </button>
+      </div>
+    </div>
+  )
+}
+
 
 export function GPUMetrics() {
 
-  const { data, error } = useSWR('/api/prommetrics?query=gpumetrics', fetcher, { refreshInterval: 3600000 });
+  const { data, error, mutate } = useSWR('/api/prommetrics?query=gpumetrics', fetcher, { refreshInterval: 3600000 });
   const chart = useRef(null);
+  const dispatch = useDispatch();
   if (data) {
     chart.current.innerHTML = '';
-    console.log("Got data from api");
+    console.log("Got data gpu from api");
     console.log(data);
     setupGraph(data.values, '#gpumetrics', 'GPUs Allocated', "l-bg-orange");
+    dispatch(update(data.updateTime));
   } else {
     // Loading state
+
 
   }
 
@@ -150,6 +177,7 @@ export function GPUMetrics() {
       <div className='col-md-4'>
         <div className='card'>
           <div id="gpumetrics" ref={chart} />
+          {error && errorMessages("Error loading GPU Metrics",  mutate )}
         </div>
       </div>
     </>
@@ -159,13 +187,15 @@ export function GPUMetrics() {
 
 export function CPUMetrics() {
 
-  const { data, error } = useSWR('/api/prommetrics?query=numpods', fetcher, { refreshInterval: 3600000 });
+  const { data, error, mutate } = useSWR('/api/prommetrics?query=numpods', fetcher, { refreshInterval: 3600000 });
   const chart = useRef(null);
+  const dispatch = useDispatch();
   if (data) {
     chart.current.innerHTML = '';
     console.log("Got data from api");
     console.log(data);
     setupGraph(data.values, '#runningpods', 'Running Pods', "l-bg-green");
+    dispatch(update(data.updateTime));
   }
 
   useEffect(() => {
@@ -178,6 +208,7 @@ export function CPUMetrics() {
       <div className='col-md-4'>
         <div className='card'>
           <div id="runningpods" ref={chart} />
+          {error && errorMessages("Error loading Pod Metrics",  mutate )}
         </div>
       </div>
     </>
@@ -189,13 +220,15 @@ export function NamespaceMetrics() {
 
 
 
-  const { data, error } = useSWR('/api/prommetrics?query=namespacemetrics', fetcher, { refreshInterval: 3600000 });
+  const { data, error, mutate } = useSWR('/api/prommetrics?query=namespacemetrics', fetcher, { refreshInterval: 3600000 });
   const chart = useRef(null);
+  const dispatch = useDispatch();
   if (data) {
     chart.current.innerHTML = '';
     console.log("Got data from api");
     console.log(data);
     setupGraph(data.values, '#namespacemetrics', 'Active Research Groups', "l-bg-cyan");
+    dispatch(update(data.updateTime));
   }
 
   useEffect(() => {
@@ -208,11 +241,14 @@ export function NamespaceMetrics() {
       <div className='col-md-4'>
         <div className='card'>
           <div id="namespacemetrics" ref={chart} />
+          {error && errorMessages("Error loading Group Metrics",  mutate )}
         </div>
       </div>
     </>
   );
 
 }
+
+
 
 

@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   var pomQuery = ""
   if (query == "gpumetrics") {
-    pomQuery = ' count (DCGM_FI_DEV_GPU_TEMP{exported_namespace!=""} * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:)';
+    pomQuery = ' count (DCGM_FI_DEV_GPU_TEMP{namespace!=""} * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:)';
   } else if (query == "numpods") {
     pomQuery = 'count(kube_pod_info)';
     //pomQuery = 'sum(kube_node_status_capacity{resource="cpu"})';
@@ -36,8 +36,11 @@ export default async function handler(req, res) {
     result = await prom.rangeQuery(pomQuery, start, end, step);
   } catch (e) {
     console.log(e);
+    return res.status(500).json({ error: e })
   }
-  //console.log(result);
+  if (query == "gpumetrics") {
+    console.log(result);
+  }
   //console.log(result.result[0].values);
   res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate')
   res.setHeader('Content-Type', 'application/json');
