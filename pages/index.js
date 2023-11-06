@@ -45,8 +45,8 @@ export default function Home() {
               </p>
 
               <div className='grid sm:grid-cols-2 grid-cols-1 gap-4 mt-10'>
-                <a className="rounded-md bg-green-600 p-3 text-xl text-center" href="https://docs.pacificresearchplatform.org/userdocs/start/get-access/">Get Access</a>
-                <a className="rounded-md bg-orange-600 p-3 text-xl text-center" href="https://docs.pacificresearchplatform.org/admindocs/participating/new-contributor-guide/">Add a server to the NRP</a>
+                <a className="rounded-md bg-green-600 p-3 text-xl text-center" href="https://docs.nationalresearchplatform.org/userdocs/start/get-access/">Get Access</a>
+                <a className="rounded-md bg-orange-600 p-3 text-xl text-center" href="https://docs.nationalresearchplatform.org/admindocs/participating/new-contributor-guide/">Add a server to the NRP</a>
 
               </div>
             </div>
