@@ -1,0 +1,34 @@
+{
+    "overrides": [
+        {
+            "regex": ".*.mghpcc.org$",
+            "geo": {
+                "country": "US",
+                "region": "MA",
+                "eu": "0",
+                "timezone": "America/Chicago",
+                "city": "Holyoke",
+                "ll": [
+                    42.205,
+                    -72.6276
+                ]
+            }
+        },
+        {
+            "regex": ".*sdsc.optiputer.net$",
+            "geo": {
+                "country": "US",
+                "region": "CA",
+                "eu": "0",
+                "timezone": "America/Los_Angeles",
+                "city": "La Jolla",
+                "ll": [
+                    32.8487,
+                    -117.2767
+                ],
+                "metro": 825,
+                "area": 5
+            }
+        }
+    ]
+}
