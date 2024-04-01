@@ -5,12 +5,18 @@ console.log(overrides);
 
 
 const kc = new k8s.KubeConfig();
-//kc.loadFromOptions({
-//  contexts: [{
-//    name
-//  }]
-//});
+//console.log(kc);
+/*
+kc.loadFromOptions({
+  contexts: [{
+    name: 'nautilus'
+  }]
+});
+*/
+//console.log(kc);
 kc.loadFromDefault();
+console.log(kc);
+kc.setCurrentContext('nautilus');
 //kc.loadFromFile("../../Desktop/kubecreds/nautilus.yaml");
 
 const k8sApi = kc.makeApiClient(k8s.CoreV1Api);

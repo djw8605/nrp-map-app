@@ -29,6 +29,39 @@
                 "metro": 825,
                 "area": 5
             }
+        },
+        {
+            "regex": ".*nysernet.org$",
+            "geo": {
+                "country": "US",
+                "region": "NY",
+                "eu": "0",
+                "timezone": "America/New_York",
+                "city": "Syracuse",
+                "ll": [
+                    43.049619,
+                    -76.152805
+                ],
+                "metro": 825,
+                "area": 5
+            }
+        },
+        {
+            "regex": ".*ucar.edu$",
+            "geo": {
+                "country": "US",
+                "region": "WY",
+                "eu": "0",
+                "timezone": "America/Cheyenne",
+                "city": "Cheyenne",
+                "ll": [
+                    41.12842223, 
+                    -104.89785578
+                ],
+                "metro": 825,
+                "area": 5
+            }
         }
+
     ]
 }
