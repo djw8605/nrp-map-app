@@ -2,6 +2,7 @@ import Head from 'next/head'
 import Footer from '../components/footer'
 import NavBar from '../components/navbar'
 //import Map from '../components/map'
+import NodeMap from '../components/nodeMap'
 import SiteList from '../components/sitelist'
 import ProjectUsage from '../components/projectusage'
 import LiveMetrics from '../components/livemetrics'
@@ -10,10 +11,7 @@ import dynamic from 'next/dynamic'
 import { GPUMetrics, CPUMetrics, NamespaceMetrics } from '../components/gpumetrics'
 
 export default function Home() {
-  const Map = dynamic(
-    () => import('../components/map'), // replace '@components/map' with your component's location
-    { ssr: false } // This line is important. It's what prevents server-side render
-  )
+
   return (
     <>
       <Head>
@@ -31,7 +29,7 @@ export default function Home() {
       <NavBar></NavBar>
 
 
-      <section className='top-section'>
+      <section className='top-section my-4'>
         <div className="container mx-auto">
           <div className='grid md:grid-cols-12 grid-cols-1 md:gap-4'>
             <div className='col-span-5 mb-4 md:mb-0'>
@@ -51,13 +49,13 @@ export default function Home() {
               </div>
             </div>
             <div className='col-span-7'>
-              <Map />
+              <NodeMap />
             </div>
           </div>
         </div>
       </section >
       <section>
-        <div className='container mx-auto'>
+        <div className='container mx-auto mt-8'>
           <div className='grid md:grid-cols-3 grid-cols-1 gap-4'>
             <GPUMetrics />
             <CPUMetrics />
