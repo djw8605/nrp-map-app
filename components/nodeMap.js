@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, ReactElement, useState, useMemo } from "react";
-import Map, { 
+import Map, {
   Marker,
   Popup,
   FullscreenControl,
@@ -65,9 +65,9 @@ export default function NodeMap() {
   const pins = useMemo(() => {
     return markers.map((node) => {
       return (
-        <Marker key={node.geo.region + "." + node.geo.city}
-          longitude={node.geo.ll[1]}
-          latitude={node.geo.ll[0]}
+        <Marker key={node.id}
+          longitude={node.longitude}
+          latitude={node.latitude}
           anchor="bottom"
           onClick={(e) => {
             e.originalEvent.stopPropagation();
@@ -83,41 +83,48 @@ export default function NodeMap() {
   // <MapMover />
   return (
     <>
-      <div className="lg:min-h-[30em] min-h-[20em] w-full h-full rounded-xl drop-shadow-md">
-        <Map
-          ref={mapRef}
-          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-          mapStyle="mapbox://styles/djw8605/cluhrtvp201az01pd8tomenyv"
-          initialViewState={initialViewState}
+      <Map
+        ref={mapRef}
+        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+        mapStyle="mapbox://styles/djw8605/cluhrtvp201az01pd8tomenyv"
+        initialViewState={initialViewState}
 
-        >
-          <FullscreenControl position="top-left" />
-          <NavigationControl position="top-left" />
-          {pins}
-          {popupInfo && (
-            <Popup
-              anchor="top"
-              longitude={popupInfo.geo.ll[1]}
-              latitude={popupInfo.geo.ll[0]}
-              onClose={() => setPopupInfo(null)}
-            >
-              <div className="">
-                <strong>{popupInfo.geo.city}, {popupInfo.geo.region}</strong>
-                <br />
-                {popupInfo.hostnames.map((hostname) => {
+      >
+        <FullscreenControl position="top-left" />
+        <NavigationControl position="top-left" />
+        {pins}
+        {popupInfo && (
+          <Popup
+            anchor="top"
+            longitude={popupInfo.longitude}
+            latitude={popupInfo.latitude}
+            onClose={() => setPopupInfo(null)}
+          >
+            <div className="max-h-[20em] overflow-scroll">
+              <table className="w-full text-left text-gray-500 dark:text-gray-400">
+                <thead className="text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b">
+                  <tr>
+                    <th scope="col">{popupInfo.name}</th>
+                  </tr>
+                </thead>
+                {popupInfo.nodes.map((hostname) => {
                   return (
                     <>
-                      {hostname}
-                      <br />
+                      <tr className="even:bg-white even:dark:bg-gray-900 odd:bg-gray-50 odd:dark:bg-gray-800 border-b dark:border-gray-700">
+                        <td>
+                          {hostname}
+                        </td>
+                      </tr>
                     </>
                   );
                 })
                 }
-              </div>
-            </Popup>
-          )}
-        </Map>
-      </div>
+              </table>
+
+            </div>
+          </Popup>
+        )}
+      </Map>
     </>
   )
 }

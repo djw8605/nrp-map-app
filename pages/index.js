@@ -49,7 +49,9 @@ export default function Home() {
               </div>
             </div>
             <div className='col-span-7'>
-              <NodeMap />
+              <div className="lg:min-h-[30em] min-h-[20em] w-full h-full rounded-xl drop-shadow-md">
+                <NodeMap />
+              </div>
             </div>
           </div>
         </div>
