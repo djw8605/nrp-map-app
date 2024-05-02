@@ -43,6 +43,60 @@ function SiteName() {
 
 }
 
+function SummaryStat({ title, value }) {
+  return (
+    <div className='bg-slate-100 p-1 flex items-center justify-center gap-2'>
+      <div className='flex flex-col gap-1 text-center'>
+        <div className='text-xl font-bold'>{value}</div>
+        <div className='text-sm'>{title}</div>
+      </div>
+    </div>
+  )
+}
+
+function PopUpVisual({ site }) {
+  // Calculate the total number of GPUs, cpus, and memory for the site
+  site.cpus = 0;
+  site.memory = 0;
+  site.gpus = 0;
+  site.nodes.forEach((node) => {
+    site.cpus += parseInt(node.cpus);
+    site.memory += parseInt(node.memory);
+    site.gpus += parseInt(node.gpus);
+  });
+  return (
+    <div className="max-h-[20em] overflow-scroll">
+      <h2 className="text-xl font-bold">{site.name}</h2>
+      <div className='grid grid-cols-3 grid-flow-col gap-2'>
+        <SummaryStat title='Nodes' value={site.nodes.length} />
+        <SummaryStat title='GPUs' value={site.gpus} />
+        <SummaryStat title='CPUs' value={site.cpus} />
+      </div>
+      <table className="w-full text-left text-gray-500 dark:text-gray-400 mt-2">
+        <thead className="text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b">
+          <tr>
+            <th scope="col">Node</th>
+          </tr>
+        </thead>
+        {site.nodes.map((hostname) => {
+          return (
+            <>
+              <tr className="even:bg-white even:dark:bg-gray-900 odd:bg-gray-50 odd:dark:bg-gray-800 border-b dark:border-gray-700">
+                <td>
+                  {hostname.name}
+                </td>
+              </tr>
+            </>
+          );
+        })
+        }
+      </table>
+
+    </div>
+  )
+
+}
+
 export default function NodeMap() {
 
   const uluru = { lat: 39.63517934689119, lng: -97.0739061397193 };
@@ -71,6 +125,7 @@ export default function NodeMap() {
           anchor="bottom"
           onClick={(e) => {
             e.originalEvent.stopPropagation();
+            console.log(node);
             setPopupInfo(node);
           }}
         >
@@ -100,28 +155,8 @@ export default function NodeMap() {
             latitude={popupInfo.latitude}
             onClose={() => setPopupInfo(null)}
           >
-            <div className="max-h-[20em] overflow-scroll">
-              <table className="w-full text-left text-gray-500 dark:text-gray-400">
-                <thead className="text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b">
-                  <tr>
-                    <th scope="col">{popupInfo.name}</th>
-                  </tr>
-                </thead>
-                {popupInfo.nodes.map((hostname) => {
-                  return (
-                    <>
-                      <tr className="even:bg-white even:dark:bg-gray-900 odd:bg-gray-50 odd:dark:bg-gray-800 border-b dark:border-gray-700">
-                        <td>
-                          {hostname}
-                        </td>
-                      </tr>
-                    </>
-                  );
-                })
-                }
-              </table>
+            <PopUpVisual site={popupInfo} />
 
-            </div>
           </Popup>
         )}
       </Map>

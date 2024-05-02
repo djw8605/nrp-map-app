@@ -68,7 +68,14 @@ async function ConfigureNodes() {
   var node_names = new Array();
   nodes.body.items.forEach((node) => {
     // Get the hostname
-    node_names.push(node.metadata.name);
+    node_info = {
+      name: node.metadata.name,
+      cpus: node.status.capacity.cpu,
+      memory: node.status.capacity.memory,
+      gpus: node.status.capacity['nvidia.com/gpu'] ? node.status.capacity['nvidia.com/gpu'] : 0,
+    }
+    //console.log(node);
+    node_names.push(node_info);
   });
 
   // Download all nodes from Netbox
@@ -88,8 +95,8 @@ async function ConfigureNodes() {
   // For each of the node_names, merge with information from netbox_nodes
   var merged_sites = new Map();
   node_names.forEach((node_name) => {
-    if (netbox_nodes.has(node_name)) {
-      var node = netbox_nodes.get(node_name);
+    if (netbox_nodes.has(node_name.name)) {
+      var node = netbox_nodes.get(node_name.name);
       //console.log(node);
       if (node.site) {
         if (merged_sites.has(node.site.id)) {
@@ -117,7 +124,7 @@ async function ConfigureNodes() {
         }
       }
     } else {
-      console.log("Node not found in Netbox: " + node_name);
+      console.log("Node not found in Netbox: " + node_name.name);
     }
   });
 
