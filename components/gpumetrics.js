@@ -2,8 +2,6 @@ import useSWR from 'swr'
 import { PrometheusDriver } from 'prometheus-query';
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { update } from '../redux/updateTime'
-import { useDispatch } from 'react-redux'
 
 
 const prom = new PrometheusDriver({
@@ -151,13 +149,11 @@ export function GPUMetrics() {
 
   const { data, error, mutate } = useSWR('/api/prommetrics?query=gpumetrics', fetcher, { refreshInterval: 3600000 });
   const chart = useRef(null);
-  const dispatch = useDispatch();
   if (data) {
     chart.current.innerHTML = '';
     console.log("Got data gpu from api");
     console.log(data);
     setupGraph(data.values, '#gpumetrics', 'GPUs Allocated', "l-bg-orange");
-    dispatch(update(data.updateTime));
   } else {
     // Loading state
 
@@ -189,13 +185,11 @@ export function CPUMetrics() {
 
   const { data, error, mutate } = useSWR('/api/prommetrics?query=numpods', fetcher, { refreshInterval: 3600000 });
   const chart = useRef(null);
-  const dispatch = useDispatch();
   if (data) {
     chart.current.innerHTML = '';
     console.log("Got data from api");
     console.log(data);
     setupGraph(data.values, '#runningpods', 'Running Pods', "l-bg-green");
-    dispatch(update(data.updateTime));
   }
 
   useEffect(() => {
@@ -222,13 +216,11 @@ export function NamespaceMetrics() {
 
   const { data, error, mutate } = useSWR('/api/prommetrics?query=namespacemetrics', fetcher, { refreshInterval: 3600000 });
   const chart = useRef(null);
-  const dispatch = useDispatch();
   if (data) {
     chart.current.innerHTML = '';
     console.log("Got data from api");
     console.log(data);
     setupGraph(data.values, '#namespacemetrics', 'Active Research Groups', "l-bg-cyan");
-    dispatch(update(data.updateTime));
   }
 
   useEffect(() => {

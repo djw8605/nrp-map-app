@@ -1,3 +1,4 @@
+'use client'
 import Head from 'next/head'
 import Footer from '../components/footer'
 import NavBar from '../components/navbar'
@@ -9,13 +10,19 @@ import LiveMetrics from '../components/livemetrics'
 
 import dynamic from 'next/dynamic'
 import { GPUMetrics, CPUMetrics, NamespaceMetrics } from '../components/gpumetrics'
+import MapInfoPanel from '../components/mapInfoPanel'
+import { useState } from 'react'
+import { Card } from '@tremor/react'
 
 export default function Home() {
+
+  // Use state to save the selected site
+  const [selectedSite, setSelectedSite] = useState(null);
 
   return (
     <>
       <Head>
-        <title>NRP</title>
+        <title>National Research Platform</title>
         <link rel="icon" type="image/png" href="/GPN_favicon4.png" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@DerekWeitzel" />
@@ -29,7 +36,40 @@ export default function Home() {
       <NavBar></NavBar>
 
 
-      <section className='top-section my-4'>
+      <section>
+        <div className='container mx-auto md:grid md:grid-cols-3 md:gap-2 mt-1'>
+          <div className='md:col-span-2 min-h-[40em] rounded shadow-lg'>
+            <NodeMap setSelectedSite={setSelectedSite} selectedSite={selectedSite} />
+          </div>
+          <div className='md:col-span-1'>
+            <MapInfoPanel site={selectedSite} setSelectedSite={setSelectedSite} />
+          </div>
+        </div>
+
+      </section>
+
+      
+      <section>
+        <div className='container mx-auto mt-8'>
+          <div className='grid md:grid-cols-3 grid-cols-1 gap-4'>
+            <GPUMetrics />
+            <CPUMetrics />
+            <NamespaceMetrics />
+          </div>
+        </div>
+      </section>
+      <section className='middle-section'>
+        <ProjectUsage />
+      </section>
+
+      <Footer></Footer>
+    </>
+  )
+}
+
+
+/*
+<section className='top-section my-4'>
         <div className="container mx-auto">
           <div className='grid md:grid-cols-12 grid-cols-1 md:gap-4'>
             <div className='col-span-5 mb-4 md:mb-0'>
@@ -50,26 +90,10 @@ export default function Home() {
             </div>
             <div className='col-span-7'>
               <div className="lg:min-h-[30em] min-h-[20em] w-full h-full rounded-xl drop-shadow-md">
-                <NodeMap />
+
               </div>
             </div>
           </div>
         </div>
       </section >
-      <section>
-        <div className='container mx-auto mt-8'>
-          <div className='grid md:grid-cols-3 grid-cols-1 gap-4'>
-            <GPUMetrics />
-            <CPUMetrics />
-            <NamespaceMetrics />
-          </div>
-        </div>
-      </section>
-      <section className='middle-section'>
-        <ProjectUsage />
-      </section>
-
-      <Footer></Footer>
-    </>
-  )
-}
+      */

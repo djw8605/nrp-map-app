@@ -1,3 +1,4 @@
+'use client'
 import React, { useEffect, useRef, ReactElement, useState, useMemo } from "react";
 import Map, {
   Marker,
@@ -11,13 +12,13 @@ import Nodes from "../data/nodes.json"
 //import 'leaflet/dist/leaflet.css';
 //import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css'
 //import "leaflet-defaulticon-compatibility";
-import { useSelector, useDispatch } from 'react-redux'
-import { update } from '../redux/siteDisplay'
+//import { update } from '../redux/siteDisplay'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLocationDot, faExpand } from "@fortawesome/free-solid-svg-icons";
+import MapInfoPanel from "./mapInfoPanel";
 
 var siteIndex = 0;
-
+/*
 function MapMover() {
   const map = useMap();
   const dispatch = useDispatch()
@@ -33,7 +34,7 @@ function MapMover() {
   }, []);
   return null;
 }
-
+*/
 
 function SiteName() {
   const site = useSelector((state) => state.siteDisplay.value);
@@ -54,50 +55,9 @@ function SummaryStat({ title, value }) {
   )
 }
 
-function PopUpVisual({ site }) {
-  // Calculate the total number of GPUs, cpus, and memory for the site
-  site.cpus = 0;
-  site.memory = 0;
-  site.gpus = 0;
-  site.nodes.forEach((node) => {
-    site.cpus += parseInt(node.cpus);
-    site.memory += parseInt(node.memory);
-    site.gpus += parseInt(node.gpus);
-  });
-  return (
-    <div className="max-h-[20em] overflow-scroll">
-      <h2 className="text-xl font-bold">{site.name}</h2>
-      <div className='grid grid-cols-3 grid-flow-col gap-2'>
-        <SummaryStat title='Nodes' value={site.nodes.length} />
-        <SummaryStat title='GPUs' value={site.gpus} />
-        <SummaryStat title='CPUs' value={site.cpus} />
-      </div>
-      <table className="w-full text-left text-gray-500 dark:text-gray-400 mt-2">
-        <thead className="text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b">
-          <tr>
-            <th scope="col">Node</th>
-          </tr>
-        </thead>
-        {site.nodes.map((hostname) => {
-          return (
-            <>
-              <tr className="even:bg-white even:dark:bg-gray-900 odd:bg-gray-50 odd:dark:bg-gray-800 border-b dark:border-gray-700">
-                <td>
-                  {hostname.name}
-                </td>
-              </tr>
-            </>
-          );
-        })
-        }
-      </table>
 
-    </div>
-  )
 
-}
-
-export default function NodeMap() {
+export default function NodeMap( {setSelectedSite, selectedSite}) {
 
   const uluru = { lat: 39.63517934689119, lng: -97.0739061397193 };
 
@@ -115,7 +75,7 @@ export default function NodeMap() {
 
   console.log(markers);
   // <img src={site.logo} alt={site.name} className='object-scale-down h-10 w-10' />
-  const [popupInfo, setPopupInfo] = useState(null);
+  //const [popupInfo, setPopupInfo] = useState(null);
   const pins = useMemo(() => {
     return markers.map((node) => {
       return (
@@ -126,14 +86,17 @@ export default function NodeMap() {
           onClick={(e) => {
             e.originalEvent.stopPropagation();
             console.log(node);
-            setPopupInfo(node);
+            setSelectedSite(node);
+          }}
+          onMouseEnter={(e) => {
+            console.log('enter: ' + node);
           }}
         >
-          <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-sky-500" />
+          <FontAwesomeIcon icon={faLocationDot} size="2x" className={node == selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"} />
         </Marker>
       )
     });
-  }, []);
+  }, [selectedSite]);
 
   // <MapMover />
   return (
@@ -148,20 +111,23 @@ export default function NodeMap() {
         <FullscreenControl position="top-left" />
         <NavigationControl position="top-left" />
         {pins}
-        {popupInfo && (
+
+
+      </Map>
+    </>
+  )
+  /* {popupInfo && (
           <Popup
             anchor="top"
             longitude={popupInfo.longitude}
             latitude={popupInfo.latitude}
             onClose={() => setPopupInfo(null)}
           >
-            <PopUpVisual site={popupInfo} />
+            <MapInfoPanel site={popupInfo} />
 
           </Popup>
         )}
-      </Map>
-    </>
-  )
+        */
 }
 
 

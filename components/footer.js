@@ -1,11 +1,7 @@
-import { useSelector, useDispatch } from 'react-redux'
-import { update } from '../redux/updateTime'
+
 
 export default function Footer() {
-  const time = useSelector((state) => state.updateTime.value);
-  console.log("Got time from redux: " + time);
-  var dateString = new Date(time).toLocaleDateString("en-US");
-  var timeString = new Date(time).toLocaleTimeString("en-US");
+
 
   return (
     <section className="footer">
@@ -14,7 +10,6 @@ export default function Footer() {
           <div className="col-md-12 align-items-center">
 
             <span>National Research Platform</span>
-            <span className="float-right">Last Updated at: { dateString + " " + timeString}</span>
           </div>
           {/*
         <ul class="nav col-md-4 justify-content-end list-unstyled d-flex">

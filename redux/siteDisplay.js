@@ -1,3 +1,4 @@
+/*
 import { createSlice } from '@reduxjs/toolkit'
 
 export const updateSiteDisplay = createSlice({
@@ -16,3 +17,5 @@ export const updateSiteDisplay = createSlice({
 export const { update } = updateSiteDisplay.actions
 
 export default updateSiteDisplay.reducer
+
+*/

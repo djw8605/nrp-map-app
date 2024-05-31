@@ -7,7 +7,7 @@ export default function NavBar() {
         <div className="container mx-auto">
           <div className="container flex flex-wrap justify-between items-center mx-auto">
             <a href="/" className="flex items-center">
-              <span className="self-center text-xl font-semibold whitespace-nowrap text-white">NRP</span>
+              <span className="self-center text-xl font-semibold whitespace-nowrap text-white">National Research Platform</span>
             </a>
           </div>
         </div>

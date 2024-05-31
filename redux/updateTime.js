@@ -1,3 +1,4 @@
+/*
 import { createSlice } from '@reduxjs/toolkit'
 
 export const updateTimeSlice = createSlice({
@@ -16,3 +17,5 @@ export const updateTimeSlice = createSlice({
 export const { update } = updateTimeSlice.actions
 
 export default updateTimeSlice.reducer
+
+*/

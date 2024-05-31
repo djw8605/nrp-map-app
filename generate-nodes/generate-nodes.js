@@ -68,11 +68,14 @@ async function ConfigureNodes() {
   var node_names = new Array();
   nodes.body.items.forEach((node) => {
     // Get the hostname
+    //console.log(node);
     node_info = {
       name: node.metadata.name,
       cpus: node.status.capacity.cpu,
       memory: node.status.capacity.memory,
-      gpus: node.status.capacity['nvidia.com/gpu'] ? node.status.capacity['nvidia.com/gpu'] : 0,
+      gpus: node.metadata.labels['nvidia.com/gpu.count'] ? node.metadata.labels['nvidia.com/gpu.count'] : 0,
+      gpuType: node.metadata.labels['nvidia.com/gpu.product'] ? node.metadata.labels['nvidia.com/gpu.product'] : "",
+      cache: node.metadata.labels['nautilus.io/stashcache'] ? true : false,
     }
     //console.log(node);
     node_names.push(node_info);
@@ -114,6 +117,7 @@ async function ConfigureNodes() {
           new_site = { 
             id: site.id,
             name: new_name,
+            siteName: site.name,
             slug: site.slug,
             latitude: site.latitude,
             longitude: site.longitude,
