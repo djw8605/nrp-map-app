@@ -7,14 +7,10 @@ import Map, {
   NavigationControl,
 } from 'react-map-gl';
 import mapboxgl from 'mapbox-gl';
-//import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+
 import Nodes from "../data/nodes.json"
-//import 'leaflet/dist/leaflet.css';
-//import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css'
-//import "leaflet-defaulticon-compatibility";
-//import { update } from '../redux/siteDisplay'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLocationDot, faExpand } from "@fortawesome/free-solid-svg-icons";
+import {faLocationDot, faExpand, faDatabase} from "@fortawesome/free-solid-svg-icons";
 import MapInfoPanel from "./mapInfoPanel";
 
 var siteIndex = 0;
@@ -73,11 +69,19 @@ export default function NodeMap( {setSelectedSite, selectedSite}) {
     zoom: 3
   }
 
-  console.log(markers);
+  //console.log(markers);
   // <img src={site.logo} alt={site.name} className='object-scale-down h-10 w-10' />
   //const [popupInfo, setPopupInfo] = useState(null);
   const pins = useMemo(() => {
     return markers.map((node) => {
+      // Check if all the nodes in the site are cache nodes
+      let allCache = true;
+      for (var i = 0; i < node.nodes.length; i++) {
+        if (!node.nodes[i].cache) {
+          allCache = false;
+          break;
+        }
+      }
       return (
         <Marker key={node.id}
           longitude={node.longitude}
@@ -92,31 +96,59 @@ export default function NodeMap( {setSelectedSite, selectedSite}) {
             console.log('enter: ' + node);
           }}
         >
-          <FontAwesomeIcon icon={faLocationDot} size="2x" className={node == selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"} />
+          {allCache ?
+            <FontAwesomeIcon icon={faDatabase} size="2x" className={node == selectedSite ? "text-red-500 z-10" : "text-green-500 z-0"} />
+            :
+            <FontAwesomeIcon icon={faLocationDot} size="2x" className={node == selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"} />
+          }
         </Marker>
       )
     });
   }, [selectedSite]);
 
+  // Create the legend
+  const Legend = () => {
+    return (
+      <div className='absolute bottom-4 right-1 bg-white p-2 rounded-lg shadow-lg'>
+        <ul className="list-none text-xs">
+          <li className="flex flex-row items-center gap-2 mb-2">
+            <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-sky-500"/>
+            NRP Site
+          </li>
+          <li className="flex flex-row items-center gap-2">
+            <FontAwesomeIcon icon={faDatabase} size="2x" className="text-green-500"/>
+            OSDF-exclusive Site
+          </li>
+        </ul>
+
+      </div>
+    );
+  };
+
+  //
+//
   // <MapMover />
   return (
     <>
+      <div className='w-full relative h-full'>
       <Map
-        ref={mapRef}
-        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/djw8605/cluhrtvp201az01pd8tomenyv"
-        initialViewState={initialViewState}
-        onClick={(e) => {
-          setSelectedSite(null);
-        }}
+          ref={mapRef}
+          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+          mapStyle="mapbox://styles/djw8605/cluhrtvp201az01pd8tomenyv"
+          initialViewState={initialViewState}
+          onClick={(e) => {
+            setSelectedSite(null);
+          }}
 
-      >
-        <FullscreenControl position="top-left" />
-        <NavigationControl position="top-left" />
-        {pins}
+        >
+          <FullscreenControl position="top-left" />
+          <NavigationControl position="top-left" />
+          {pins}
 
 
-      </Map>
+        </Map>
+        <Legend />
+      </div>
     </>
   )
 }
