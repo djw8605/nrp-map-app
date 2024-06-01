@@ -1,23 +1,32 @@
 'use client'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLocationDot, faExpand, faServer, faCircle, faNetworkWired, faMicrochip, faRotateRight, faChartColumn } from "@fortawesome/free-solid-svg-icons";
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
+import {
+  faLocationDot,
+  faExpand,
+  faServer,
+  faCircle,
+  faNetworkWired,
+  faMicrochip,
+  faRotateRight,
+  faChartColumn, faCircleArrowUp, faCircleArrowDown
+} from "@fortawesome/free-solid-svg-icons";
 import useSWR from 'swr'
-import { Badge, BarChart, Card, SparkAreaChart, DonutChart, Legend, BadgeDelta } from '@tremor/react';
-import { RiCpuLine, RiServerLine, RiDatabase2Line } from '@remixicon/react';
+import {Badge, BarChart, Card, SparkAreaChart, DonutChart, Legend, BadgeDelta} from '@tremor/react';
+import {RiCpuLine, RiServerLine, RiDatabase2Line} from '@remixicon/react';
 import Nodes from "../data/nodes.json"
 import Select from 'react-select'
-import { useState, useEffect, useMemo } from 'react';
+import {useState, useEffect, useMemo} from 'react';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
 /**
  * Format bytes as human-readable text.
- * 
+ *
  * @param bytes Number of bytes.
- * @param si True to use metric (SI) units, aka powers of 1000. False to use 
+ * @param si True to use metric (SI) units, aka powers of 1000. False to use
  *           binary (IEC), aka powers of 1024.
  * @param dp Number of decimal places to display.
- * 
+ *
  * @return Formatted string.
  */
 function humanTransferSpeed(bytes, si = false, dp = 1) {
@@ -46,47 +55,48 @@ function LoadingElement() {
   return (
     <div className="flex gap-2 items-center">
       <div>
-        <FontAwesomeIcon icon={faRotateRight} className='animate-spin h-6 w-6' />
+        <FontAwesomeIcon icon={faRotateRight} className='animate-spin h-6 w-6'/>
       </div>
       <div className=''>Loading...</div>
     </div>
   )
 }
 
-/*
-<div className='flex flex-col gap-1 border-[1px] border-slate-200 rounded'>
-      <div className='flex flex-row gap-2 items-center p-2 border-b-[1px] w-full'>
-        <FontAwesomeIcon icon={faNetworkWired} size="2x" className="text-green-500 text-xl" />
-        <div className=''>
-          Network
+function NetworkCard({data, currentValue, title, icon, iconColor, graphColor}) {
+  return (
+    <Card className="w-full flex flex-col justify-between p-0">
+      <div className="flex flex-row justify-between px-2 pt-2">
+        <div className="flex flex-col items-start">
+          <p
+            className="text-tremor-default font-medium text-tremor-content dark:text-dark-tremor-content mb-1">{title}</p>
+          <p
+            className="text-tremor-metric font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {data ? currentValue : "Loading..."}
+          </p>
+        </div>
+        <div>
+          <FontAwesomeIcon icon={icon} size="2x" className={`${iconColor} text-xl`}/>
         </div>
       </div>
-      <div className='flex flex-row justify-around p-2'>
-        <div className='flex flex-col place-items-end'>
-          <div className='text-sm'>
-            {!data ? (
-              <LoadingElement />
-            ) : (
-              humanTransferSpeed(data.download)
-            )}</div>
-          <div className='text-xs text-slate-500'>Download</div>
-        </div>
-        <div className='flex flex-col place-items-end'>
-          <div className='text-sm'>
-            {!data ? (
-              <LoadingElement />
-            ) : (
-              humanTransferSpeed(data.upload)
-            )}</div>
-          <div className='text-xs text-slate-500'>Upload</div>
-        </div>
-      </div>
-    </div>
-    */
+      {!data ? (
+        <LoadingElement/>
+      ) : (
+        <SparkAreaChart
+          data={data}
+          categories={['value']}
+          index={'time'}
+          colors={[graphColor]}
+          className="w-full"
+        />
+      )}
+    </Card>
+  )
 
-function SiteNetworkStats({ site }) {
+}
 
-  const { data, error } = useSWR(`/api/sitenetwork?site=${site.slug}`, fetcher, { refreshInterval: 60000 });
+function SiteNetworkStats({site}) {
+
+  const {data, error} = useSWR(`/api/sitenetwork?site=${site.slug}`, fetcher, {refreshInterval: 60000});
   var humanTransmit = "";
   var humanReceive = "";
   if (data) {
@@ -102,89 +112,30 @@ function SiteNetworkStats({ site }) {
 
   return (
     <>
-      <Card className="mx-auto flex max-w-lg items-center justify-between px-4 py-3.5 gap-1">
-        <div className="flex items-center space-x-2.5">
-          <p className="text-tremor-content-strong dark:text-dark-tremor-content-strong font-medium">Transmit</p>
-        </div>
-        {!data ? (
-          <LoadingElement />
-        ) : (
-          <SparkAreaChart
-            data={data.transmit}
-            categories={['value']}
-            index={'time'}
-            colors={['emerald']}
-            className="h-8 w-20 sm:h-10 sm:w-36"
-          />
-        )}
-
-        <div className="flex items-center space-x-2.5">
-          <span className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-            {data ? humanTransmit : "Loading..."}
-          </span>
-
-        </div>
-      </Card>
-      <Card className="mx-auto flex max-w-lg items-center justify-between px-4 py-3.5 gap-1">
-        <div className="flex items-center space-x-2.5">
-          <p className="text-tremor-content-strong dark:text-dark-tremor-content-strong font-medium">Receive</p>
-        </div>
-        {!data ? (
-          <LoadingElement />
-        ) : (
-          <SparkAreaChart
-            data={data.receive}
-            categories={['value']}
-            index={'time'}
-            colors={['red']}
-            className="h-8 w-20 sm:h-10 sm:w-36"
-          />
-        )}
-
-        <div className="flex items-center space-x-2.5">
-          <span className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-            {data ? humanReceive : "Loading..."}
-          </span>
-
-        </div>
-      </Card>
+      <div className='mx-auto w-full grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1 gap-2'>
+        <NetworkCard
+          data={data ? data.receive : null}
+          currentValue={humanReceive}
+          title="Receive"
+          icon={faCircleArrowDown}
+          iconColor="text-green-500"
+          graphColor="emerald"
+        />
+        <NetworkCard
+          data={data ? data.transmit : null}
+          currentValue={humanTransmit}
+          title="Transmit"
+          icon={faCircleArrowUp}
+          iconColor="text-red-500"
+          graphColor="red"
+        />
+      </div>
 
     </>
   )
 }
 
-/*
-<div className='flex flex-col gap-1 border-[1px] border-slate-200 rounded-t'>
-      <div className='flex flex-row items-center gap-2 p-2 border-b-[1px] w-full'>
-        <FontAwesomeIcon icon={faChartColumn} size="2x" className="text-sky-500 text-xl" />
-        <div className=''>
-          Summary Stats <span className='text-xs text-slate-500'>In the last 7 days</span>
-        </div>
-
-      </div>
-      {!data ? (
-        <LoadingElement />
-      ) : (
-        <div className='flex flex-col gap-1'>
-          <div className='flex flex-row gap-2 p-2 justify-around'>
-            <div className='flex flex-col place-items-end'>
-              <div className=''>{data.gpuHours.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-              <div className='text-xs text-slate-500'>GPU Hours</div>
-
-            </div>
-            <div className='flex flex-col place-items-end'>
-              <div className=''>{data.cpuHours.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-              <div className='text-xs text-slate-500'>CPU Hours</div>
-
-            </div>
-          </div>
-
-        </div>
-      )}
-    </div>
-    */
-
-function MetricCard({ title, value, belowText, difference }) {
+function MetricCard({title, value, belowText, difference}) {
 
   let deltaType = "moderateIncrease";
   if (difference > 0.15) {
@@ -206,16 +157,19 @@ function MetricCard({ title, value, belowText, difference }) {
           {title}
         </p>
         {!value ? (
-          <LoadingElement />
+          <LoadingElement/>
         ) : (
           <>
             <p className="text-tremor-metric font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
               {value}
             </p>
+
             <div className="text-tremor-label text-tremor-content dark:text-dark-tremor-content flex flex-row items-center">
-              <BadgeDelta className='mr-1' size="xs" deltaType={deltaType} isIncreasePositive={true}>
-                {(difference * 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}%
-              </BadgeDelta>
+              {difference && (
+                <BadgeDelta className='mr-1' size="xs" deltaType={deltaType} isIncreasePositive={true}>
+                  {(difference * 100).toLocaleString(undefined, {maximumFractionDigits: 0})}%
+                </BadgeDelta>
+              )}
               {belowText}
             </div>
           </>
@@ -225,39 +179,41 @@ function MetricCard({ title, value, belowText, difference }) {
   )
 }
 
-function SiteStats({ site }) {
+function SiteStats({site}) {
 
-  const { data, error } = useSWR(`/api/sitemetrics?site=${site.slug}`, fetcher, { refreshInterval: 60000 });
+  const {data, error} = useSWR(`/api/sitemetrics?site=${site.slug}`, fetcher, {refreshInterval: 60000});
   if (data) {
     console.log("Site Stats");
     console.log(data);
   }
 
-  let totalGpus = site.nodes.reduce((acc, node) => { return acc + parseInt(node.gpus) }, 0);
+  let totalGpus = site.nodes.reduce((acc, node) => {
+    return acc + parseInt(node.gpus)
+  }, 0);
 
   return (
     <Card className='mx-auto w-full p-0'>
-      <div className='grid grid-cols-2 divide-x'>
+      <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1 lg:divide-x sm:divide-x md:divide-y divide-y'>
         {totalGpus > 0 && (
           <MetricCard
             title="GPU Hours"
-            value={data ? data.gpuHours.toLocaleString(undefined, { maximumFractionDigits: 0 }) : null}
+            value={data ? data.gpuHours.toLocaleString(undefined, {maximumFractionDigits: 0}) : null}
             belowText="From previous week"
-            difference={data ? ((data.gpuHours - data.prevGpuHours) / data.prevGpuHours) : null} />
+            difference={data ? ((data.gpuHours - data.prevGpuHours) / data.prevGpuHours) : null}/>
         )}
 
         <MetricCard
           title="CPU Hours"
-          value={data ? data.cpuHours.toLocaleString(undefined, { maximumFractionDigits: 0 }) : null}
+          value={data ? data.cpuHours.toLocaleString(undefined, {maximumFractionDigits: 0}) : null}
           belowText="From previous week"
           difference={data ? ((data.cpuHours - data.prevCpuHours) / data.prevCpuHours) : null}
         />
-      </div >
+      </div>
     </Card>
   )
 }
 
-function StatusBadge({ icon, text, color }) {
+function StatusBadge({icon, text, color}) {
 
   return (
     <>
@@ -272,9 +228,9 @@ function StatusBadge({ icon, text, color }) {
 
 }
 
-function SiteGpuStats({ site }) {
+function SiteGpuStats({site}) {
   // Fetch the GPU metrics
-  const { data, error } = useSWR(`/api/sitegpus?site=${site.slug}`, fetcher, { refreshInterval: 60000 });
+  const {data, error} = useSWR(`/api/sitegpus?site=${site.slug}`, fetcher, {refreshInterval: 60000});
 
   var cleaned_data = null;
   if (data) {
@@ -283,7 +239,7 @@ function SiteGpuStats({ site }) {
     cleaned_data = data.map((item) => {
       console.log(item.time);
       let current_date = new Date(item.time);
-      return { "Date": current_date.getMonth() + "/" + current_date.getDate(), "GPU Hours": item.value }
+      return {"Date": current_date.getMonth() + "/" + current_date.getDate(), "GPU Hours": item.value}
     });
     console.log(cleaned_data);
   }
@@ -299,7 +255,7 @@ function SiteGpuStats({ site }) {
           GPU Hours by Day
         </h3>
         {!data ? (
-          <LoadingElement />
+          <LoadingElement/>
         ) : (
           <BarChart
             className='max-h-40'
@@ -319,7 +275,7 @@ function SiteGpuStats({ site }) {
 
 }
 
-function SiteGpuTypes({ site }) {
+function SiteGpuTypes({site}) {
   // valueFormatter={dataFormatter}
 
   const [selectedGpuType, setSelectedGpuType] = useState(null);
@@ -338,7 +294,7 @@ function SiteGpuTypes({ site }) {
       }
     }
     // Convert to an array of objects
-    return Array.from(tmpGpuTypes, ([name, value]) => ({ name: name, value: value }));
+    return Array.from(tmpGpuTypes, ([name, value]) => ({name: name, value: value}));
 
   }, [site]);
 
@@ -352,9 +308,9 @@ function SiteGpuTypes({ site }) {
       <h3 className="text-lg font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
         GPU Types
       </h3>
-      <div className='grid grid-cols-8 gap-2'>
+      <div className='grid lg:grid-cols-8 grid-cols-1 gap-2'>
         <DonutChart
-          className='col-span-3'
+          className='lg:col-span-3'
           data={gpuTypes}
           index="name"
           categories={["value"]}
@@ -369,19 +325,19 @@ function SiteGpuTypes({ site }) {
           active={selectedGpuType}
         />
         <Legend
-          className='col-span-5'
+          className='lg:col-span-5'
           categories={gpuNames}
           activeLegend={selectedGpuType}
           onClickLegendItem={(e) => {
             selectedGpuType === e ? setSelectedGpuType(null) : setSelectedGpuType(e);
-          }} />
+          }}/>
       </div>
     </Card>
   )
 }
 
-function SiteSelectBox({ selectedSite, setSelectedSite }) {
-  const internalSetSelectedSite = ({ value, label, fullSite }) => {
+function SiteSelectBox({selectedSite, setSelectedSite}) {
+  const internalSetSelectedSite = ({value, label, fullSite}) => {
     // Find the site from the slug
     //let newSelectedSite = Nodes.find((node) => node.slug == site);
     //console.log(newSelectedSite);
@@ -403,17 +359,19 @@ function SiteSelectBox({ selectedSite, setSelectedSite }) {
 
   const options = Nodes.map((node) => {
     return (
-      { value: node.slug, label: node.name, fullSite: node }
+      {value: node.slug, label: node.name, fullSite: node}
     )
   });
 
-  const formatOptionLabel = ({ value, label, fullSite }) => (
+  const formatOptionLabel = ({value, label, fullSite}) => (
 
     <div className="flex flex-row gap-2 items-center">
-      <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-red-500 text-xl" />
+      <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-red-500 text-xl"/>
       <div>
         <h2 className="text-xl font-bold">{fullSite.name}</h2>
-        {fullSite.name == fullSite.siteName ? null : <h6 className="whitespace-nowrap truncate text-tremor-default text-tremor-content group-hover:text-tremor-content-emphasis dark:text-dark-tremor-content opacity-100 dark:group-hover:text-dark-tremor-content-emphasis">{fullSite.siteName}</h6>}
+        {fullSite.name == fullSite.siteName ? null :
+          <h6
+            className="whitespace-nowrap truncate text-tremor-default text-tremor-content group-hover:text-tremor-content-emphasis dark:text-dark-tremor-content opacity-100 dark:group-hover:text-dark-tremor-content-emphasis">{fullSite.siteName}</h6>}
       </div>
     </div>
   );
@@ -433,41 +391,66 @@ function SiteSelectBox({ selectedSite, setSelectedSite }) {
 }
 
 
-function DefaultInfoPanel({ setSelectedSite, selectedSite }) {
+function DefaultInfoPanel({setSelectedSite, selectedSite}) {
   // max-h-[30em] lg:w-80 overflow-scroll lg:top-1 lg:right-1 lg:absolute
 
-
+  // Count the number of sits in the nodes
+  let totalNodes = Nodes.reduce((acc, site) => {
+    return acc + parseInt(site.nodes.length);
+  }, 0);
+  let totalSites = Nodes.length;
   return (
-    <div className=" bg-white flex flex-col px-1 py-2">
+    <div className="bg-white flex flex-col p-2">
       <div className=''>
-        <img src="/images/NRP_LOGO-cropped.png" alt="NRP Logo" className='object-scale-down' />
+        <img src="/images/NRP_LOGO-cropped.png" alt="NRP Logo" className='object-scale-down'/>
       </div>
       <div className='mt-1'>
         <p>
           The National Research Platform is a partnership of more than 50 institutions, led by researchers at
-          UC San Diego, University of Nebraska-Lincoln, and UC Berkeley and includes the National Science Foundation, Department of Energy,
+          UC San Diego, University of Nebraska-Lincoln, and UC Berkeley and includes the National Science
+          Foundation, Department of Energy,
           and multiple research universities in the US and around the world.
         </p>
       </div>
-      <div className='mt-2'>
-        <label htmlFor="siteSelect" className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">Select a site or click on a site in the map</label>
-        <SiteSelectBox selectedSite={selectedSite} setSelectedSite={setSelectedSite} />
+      <div className='my-2'>
+        <label htmlFor="siteSelect"
+               className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">Select a site
+          or click on a site in the map</label>
+        <SiteSelectBox id="siteSelect" selectedSite={selectedSite} setSelectedSite={setSelectedSite}/>
       </div>
+      <Card className='mx-auto w-full p-0 my-2'>
+        <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1 lg:divide-x sm:divide-x md:divide-y divide-y'>
+
+          <MetricCard
+            title="Sites"
+            value={totalSites.toLocaleString(undefined)}
+            belowText="Sites hosting NRP nodes"
+            />
+
+          <MetricCard
+            title="Nodes"
+            value={totalNodes.toLocaleString(undefined)}
+            belowText="Nodes registered in Kubernetes"
+          />
+        </div>
+      </Card>
     </div>
   )
 }
 
-export default function MapInfoPanel({ site, setSelectedSite }) {
+export default function MapInfoPanel({site, setSelectedSite}) {
   if (!site) {
     return (
       <>
-        <DefaultInfoPanel selectedSite={site} setSelectedSite={setSelectedSite} />
+        <DefaultInfoPanel selectedSite={site} setSelectedSite={setSelectedSite}/>
       </>
     );
   }
 
   // Calculate the number of gpus
-  let totalGpus = site.nodes.reduce((acc, node) => { return acc + parseInt(node.gpus) }, 0);
+  let totalGpus = site.nodes.reduce((acc, node) => {
+    return acc + parseInt(node.gpus)
+  }, 0);
   let totalCaches = site.nodes.reduce((acc, node) => {
     if (node.cache)
       return acc + 1;
@@ -480,20 +463,20 @@ export default function MapInfoPanel({ site, setSelectedSite }) {
   // lg:w-96 overflow-scroll lg:top-1 lg:right-1 lg:absolute relative
   console.log(site);
   return (
-    <div className=" bg-white">
+    <div className="bg-white p-2 md:p-0">
       <div className='mb-2'>
-        <SiteSelectBox selectedSite={site} setSelectedSite={setSelectedSite} />
+        <SiteSelectBox selectedSite={site} setSelectedSite={setSelectedSite}/>
       </div>
-      <div className='flex flex-row gap-2 mb-2'>
+      <div className='flex flex-row flex-wrap gap-2 mb-2'>
         <Badge icon={RiServerLine} color="green">{site.nodes.length} Nodes Online</Badge>
         {totalGpus > 0 && <Badge icon={RiCpuLine} color="blue">{totalGpus} GPUs</Badge>}
         {totalCaches > 0 && <Badge icon={RiDatabase2Line} color="violet">{totalCaches} OSDF Nodes</Badge>}
       </div>
       <div className="flex flex-col gap-2">
-        <SiteStats site={site} />
-        {totalGpus > 0 ? <SiteGpuStats site={site} /> : null}
-        {totalGpus > 0 ? <SiteGpuTypes site={site} /> : null}
-        <SiteNetworkStats site={site} />
+        <SiteStats site={site}/>
+        {totalGpus > 0 ? <SiteGpuStats site={site}/> : null}
+        {totalGpus > 0 ? <SiteGpuTypes site={site}/> : null}
+        <SiteNetworkStats site={site}/>
       </div>
 
 

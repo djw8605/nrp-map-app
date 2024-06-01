@@ -106,6 +106,9 @@ export default function NodeMap( {setSelectedSite, selectedSite}) {
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
         mapStyle="mapbox://styles/djw8605/cluhrtvp201az01pd8tomenyv"
         initialViewState={initialViewState}
+        onClick={(e) => {
+          setSelectedSite(null);
+        }}
 
       >
         <FullscreenControl position="top-left" />
@@ -116,18 +119,6 @@ export default function NodeMap( {setSelectedSite, selectedSite}) {
       </Map>
     </>
   )
-  /* {popupInfo && (
-          <Popup
-            anchor="top"
-            longitude={popupInfo.longitude}
-            latitude={popupInfo.latitude}
-            onClose={() => setPopupInfo(null)}
-          >
-            <MapInfoPanel site={popupInfo} />
-
-          </Popup>
-        )}
-        */
 }
 
 
