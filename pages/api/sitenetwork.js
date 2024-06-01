@@ -27,8 +27,8 @@ export default async function handler(req, res) {
   // Combine all node names into a regex
   var nodeRegex = nodes.reduce((acc, val) => acc + "|" + val.name, "").substring(1);
   //console.log(nodeRegex);
-  var transmitQuery = `sum(irate(node_network_transmit_bytes_total{instance=~"${nodeRegex}", device=~"en.*|et.*"}[5m]))`
-  var receiveQuery = `sum(irate(node_network_receive_bytes_total{instance=~"${nodeRegex}", device=~"en.*|et.*"}[5m]))`
+  var transmitQuery = `sum(rate(node_network_transmit_bytes_total{instance=~"${nodeRegex}", device=~"en.*|et.*"}[5m]))`
+  var receiveQuery = `sum(rate(node_network_receive_bytes_total{instance=~"${nodeRegex}", device=~"en.*|et.*"}[5m]))`
 
   //console.log(transmitQuery);
   //console.log(receiveQuery);
