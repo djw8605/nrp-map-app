@@ -18,6 +18,7 @@ export default function Home() {
 
   // Use state to save the selected site
   const [selectedSite, setSelectedSite] = useState(null);
+  const [mapStyle, setMapStyle] = useState('default');
 
   return (
     <>
