@@ -193,7 +193,7 @@ function SiteStats({site}) {
 
   return (
     <Card className='mx-auto w-full p-0'>
-      <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1 lg:divide-x sm:divide-x md:divide-y divide-y'>
+      <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1 lg:divide-x md:divide-x-0 sm:divide-x lg:divide-y-0 md:divide-y sm:divide-y-0 divide-y'>
         {totalGpus > 0 && (
           <MetricCard
             title="GPU Hours"
