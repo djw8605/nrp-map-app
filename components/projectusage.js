@@ -52,7 +52,8 @@ function DataTableLoading() {
 
 function Projects({ setSelectedNamespace }) {
   //const { data, error } = GetProjects();
-  const namespace_info = GetNamespaces();
+  //const namespace_info = GetNamespaces();
+  const namespace_info = null;
   const namespace_usage = GetNamespaceUsage();
   var loading_text = "Loading "
   if (!namespace_info.data) {
