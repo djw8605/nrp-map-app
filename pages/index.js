@@ -59,15 +59,17 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <section className='middle-section'>
-        <ProjectUsage />
-      </section>
+
 
       <Footer></Footer>
     </>
   )
 }
 
+/*
+      <section className='middle-section'>
+        <ProjectUsage />
+      </section>
 
 /*
 <section className='top-section my-4'>
