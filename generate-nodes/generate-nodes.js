@@ -6,7 +6,7 @@ var geohash = require('ngeohash');
 
 async function DownloadAllSites() {
   return new Promise((resolve, reject) => {
-    response = axios.get('http://netbox-3.nrp-nautilus.io/api/dcim/sites/', {
+    response = axios.get('http://netbox-4.nrp-nautilus.io/api/dcim/sites/', {
       params: {
         limit: 10000
       },
@@ -82,7 +82,7 @@ async function ConfigureNodes() {
   });
 
   // Download all nodes from Netbox
-  var response = { next: 'http://netbox-3.nrp-nautilus.io/api/dcim/devices/' }
+  var response = { next: 'http://netbox-4.nrp-nautilus.io/api/dcim/devices/' }
     var results = new Array();
     while (response.next != null) {
       response = await DownloadPaginatedNodes(response.next);
