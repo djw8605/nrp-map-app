@@ -68,7 +68,11 @@ async function ConfigureNodes() {
   var node_names = new Array();
   nodes.body.items.forEach((node) => {
     // Get the hostname
-    //console.log(node);
+    // Exclude nodes that are virtual, ie admirality virtual nodes
+    if (node.metadata.labels.hasOwnProperty("type") &&
+        node.metadata.labels['type'].includes("virtual-kubelet")) {
+      return;
+    }
     node_info = {
       name: node.metadata.name,
       cpus: node.status.capacity.cpu,
