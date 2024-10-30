@@ -239,7 +239,7 @@ function SiteGpuStats({site}) {
     cleaned_data = data.map((item) => {
       console.log(item.time);
       let current_date = new Date(item.time);
-      return {"Date": current_date.getMonth() + "/" + current_date.getDate(), "GPU Hours": item.value}
+      return {"Date": (current_date.getMonth()+1) + "/" + current_date.getDate(), "GPU Hours": item.value}
     });
     console.log(cleaned_data);
   }
