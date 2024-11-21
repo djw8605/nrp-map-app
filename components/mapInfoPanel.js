@@ -406,10 +406,11 @@ function DefaultInfoPanel({setSelectedSite, selectedSite}) {
       </div>
       <div className='mt-1'>
         <p>
-          The National Research Platform is a partnership of more than 50 institutions, led by researchers at
-          UC San Diego, University of Nebraska-Lincoln, and UC Berkeley and includes the National Science
-          Foundation, Department of Energy,
-          and multiple research universities in the US and around the world.
+          The National Research Platform is a partnership of more than 50 institutions,
+          led by researchers at UC San Diego, University of Nebraska-Lincoln, and Massachusetts
+          Green High Performance Computing Center and includes contributions by the National
+          Science Foundation, the Department of Energy, the Department of Defense, and many
+          research universities and R&E networking organizations in the US and around the world.
         </p>
       </div>
       <div className='my-2'>
