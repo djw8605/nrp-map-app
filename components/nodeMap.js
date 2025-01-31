@@ -53,7 +53,7 @@ function SummaryStat({ title, value }) {
 
 
 
-export default function NodeMap( {setSelectedSite, selectedSite}) {
+export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}) {
 
   const uluru = { lat: 39.63517934689119, lng: -97.0739061397193 };
 
@@ -97,9 +97,9 @@ export default function NodeMap( {setSelectedSite, selectedSite}) {
           }}
         >
           {allCache ?
-            <FontAwesomeIcon icon={faDatabase} size="2x" className={node == selectedSite ? "text-red-500 z-10" : "text-green-500 z-0"} />
+            <FontAwesomeIcon icon={faDatabase} size="2x" className={` cursor-pointer ${node == selectedSite ? "text-red-500 z-10" : "text-green-500 z-0"}`} />
             :
-            <FontAwesomeIcon icon={faLocationDot} size="2x" className={node == selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"} />
+            <FontAwesomeIcon icon={faLocationDot} size="2x" className={` cursor-pointer ${node == selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"}`} />
           }
         </Marker>
       )
@@ -144,6 +144,17 @@ export default function NodeMap( {setSelectedSite, selectedSite}) {
           <FullscreenControl position="top-left" />
           <NavigationControl position="top-left" />
           {pins}
+
+        { selectedSite && usePopup && (
+          <Popup
+            anchor="top"
+            longitude={Number(selectedSite.longitude)}
+            latitude={Number(selectedSite.latitude)}
+            onClose={() => setSelectedSite(null)}
+            >
+            <h3 className="text-sm">{selectedSite.name}</h3>
+          </Popup>
+        )}
 
 
         </Map>
