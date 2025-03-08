@@ -301,7 +301,7 @@ function SiteGpuTypes({site}) {
   //console.log("GPU Types");
   //console.log(gpuTypes);
   // Calculate all of the unique names from gpuTypes
-  const gpuNames = gpuTypes.map((gpu) => gpu.name);
+  const gpuValueNames = gpuTypes.map((gpu) => gpu.value + " - " + gpu.name);
 
   return (
     <Card className='mx-auto w-full p-2 max-h-80'>
@@ -326,7 +326,7 @@ function SiteGpuTypes({site}) {
         />
         <Legend
           className='lg:col-span-5'
-          categories={gpuNames}
+          categories={gpuValueNames}
           activeLegend={selectedGpuType}
           onClickLegendItem={(e) => {
             selectedGpuType === e ? setSelectedGpuType(null) : setSelectedGpuType(e);
