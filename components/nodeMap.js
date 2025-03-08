@@ -97,9 +97,9 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
           }}
         >
           {allCache ?
-            <FontAwesomeIcon icon={faDatabase} size="2x" className={` cursor-pointer ${node == selectedSite ? "text-red-500 z-10" : "text-green-500 z-0"}`} />
+            <FontAwesomeIcon icon={faDatabase} size="2x" className={`map-pin cursor-pointer ${node == selectedSite ? "text-red-500 z-10" : "text-green-500 z-0"}`} />
             :
-            <FontAwesomeIcon icon={faLocationDot} size="2x" className={` cursor-pointer ${node == selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"}`} />
+            <FontAwesomeIcon icon={faLocationDot} size="2x" className={`map-pin cursor-pointer ${node == selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"}`} />
           }
         </Marker>
       )
@@ -125,6 +125,15 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
     );
   };
 
+  // On initial load, set the size of the pins
+  useEffect(() => {
+    var markers = document.getElementsByClassName('map-pin');
+    for (var i = 0; i < markers.length; i++) {
+      markers[i].style.width = Math.max(Math.min(9 * mapRef.current.getMap().getZoom(), 30), 7) + 'px';
+      markers[i].style.height = Math.max(Math.min(9 * mapRef.current.getMap().getZoom(), 30), 7) + 'px';
+    }
+  }, []);
+
   //
 //
   // <MapMover />
@@ -138,6 +147,15 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
           initialViewState={initialViewState}
           onClick={(e) => {
             setSelectedSite(null);
+          }}
+          
+          onZoom={(e) => {
+            // Loop through the pins and adjust the size of the icons
+            var markers = document.getElementsByClassName('map-pin');
+            for (var i = 0; i < markers.length; i++) {
+              markers[i].style.width = Math.max(Math.min(9 * mapRef.current.getMap().getZoom(), 30), 7) + 'px';
+              markers[i].style.height = Math.max(Math.min(9 * mapRef.current.getMap().getZoom(), 30), 7) + 'px';
+            }
           }}
 
         >
