@@ -105,7 +105,7 @@ function SiteNetworkStats({site}) {
     let last_transmit = data.transmit[data.transmit.length - 1];
     humanTransmit = humanTransferSpeed(last_transmit.value, true);
 
-    let last_receive = data.receive[data.transmit.length - 1];
+    let last_receive = data.receive[data.receive.length - 1];
     humanReceive = humanTransferSpeed(last_receive.value, true);
   }
 
