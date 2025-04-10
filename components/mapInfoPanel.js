@@ -153,7 +153,7 @@ function MetricCard({title, value, belowText, difference}) {
   return (
     <>
       <div className='mx-auto w-full p-2'>
-        <p className="text-tremor-default font-medium text-tremor-content dark:text-dark-tremor-content mb-1">
+        <p className="text-tremor-default font-medium text-tremor-content dark:text-dark-tremor-content ">
           {title}
         </p>
         {!value ? (
@@ -399,6 +399,20 @@ function DefaultInfoPanel({setSelectedSite, selectedSite}) {
     return acc + parseInt(site.nodes.length);
   }, 0);
   let totalSites = Nodes.length;
+
+  // Calculate total GPUs and CPUs
+  let totalGPUs = Nodes.reduce((acc, site) => {
+    return acc + site.nodes.reduce((nodeAcc, node) => {
+      return nodeAcc + (parseInt(node.gpus) || 0);
+    }, 0);
+  }, 0);
+
+  let totalCPUs = Nodes.reduce((acc, site) => {
+    return acc + site.nodes.reduce((nodeAcc, node) => {
+      return nodeAcc + (parseInt(node.cpus) || 0);
+    }, 0);
+  }, 0);
+  
   return (
     <div className="bg-white flex flex-col p-2">
       <div className=''>
@@ -421,17 +435,25 @@ function DefaultInfoPanel({setSelectedSite, selectedSite}) {
       </div>
       <Card className='mx-auto w-full p-0 my-2'>
         <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1 lg:divide-x sm:divide-x md:divide-y divide-y'>
-
           <MetricCard
             title="Sites"
             value={totalSites.toLocaleString(undefined)}
             belowText="Sites hosting NRP nodes"
             />
-
           <MetricCard
             title="Nodes"
             value={totalNodes.toLocaleString(undefined)}
             belowText="Nodes registered in Kubernetes"
+          />
+          <MetricCard
+            title="GPUs"
+            value={totalGPUs.toLocaleString(undefined)}
+            belowText="Total GPUs across all nodes"
+          />
+          <MetricCard
+            title="CPU Cores"
+            value={totalCPUs.toLocaleString(undefined)}
+            belowText="Total CPU cores across all nodes"
           />
         </div>
       </Card>
