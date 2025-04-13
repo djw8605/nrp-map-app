@@ -9,7 +9,7 @@ import ProjectUsage from '../components/projectusage'
 import LiveMetrics from '../components/livemetrics'
 
 import dynamic from 'next/dynamic'
-import { GPUMetrics, CPUMetrics, NamespaceMetrics } from '../components/gpumetrics'
+import { GPUMetrics, CPUMetrics, NamespaceMetrics, ClusterMetrics } from '../components/gpumetrics'
 import MapInfoPanel from '../components/mapInfoPanel'
 import { useState } from 'react'
 import { Card } from '@tremor/react'
@@ -48,13 +48,11 @@ export default function Home() {
       </section>
 
       
+      
       <section>
         <div className='container mx-auto mt-8'>
-          <div className='grid md:grid-cols-3 grid-cols-1 gap-4'>
-            <GPUMetrics />
-            <CPUMetrics />
-            <NamespaceMetrics />
-          </div>
+          <ClusterMetrics />
+
         </div>
       </section>
 
@@ -63,6 +61,14 @@ export default function Home() {
     </>
   )
 }
+
+/*
+          <div className='grid md:grid-cols-3 grid-cols-1 gap-4'>
+            <GPUMetrics />
+            <CPUMetrics />
+            <NamespaceMetrics />
+          </div>
+          */
 
 /*
       <section className='middle-section'>

@@ -12,15 +12,12 @@ thead {
 }
 
 nav {
-    background-color: #000033;
+    background: #007aff; /* Solid darker blue */
 }
 
 .footer {
-    background-color: #000033;
+    background: #007aff; /* Solid darker blue */
     color: #fff;
-}
-
-.footer {
     margin-top: 1em;
 }
 

@@ -416,7 +416,9 @@ function DefaultInfoPanel({setSelectedSite, selectedSite}) {
   return (
     <div className="bg-white flex flex-col p-2">
       <div className=''>
-        <img src="/images/NRP_LOGO-cropped.png" alt="NRP Logo" className='object-scale-down'/>
+        <a href="https://nationalresearchplatform.org" target="_blank" rel="noopener noreferrer">
+          <img src="/images/NRP_LOGO-cropped.png" alt="NRP Logo" className='object-scale-down'/>
+        </a>
       </div>
       <div className='mt-1'>
         <p>

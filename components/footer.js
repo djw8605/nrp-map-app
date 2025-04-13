@@ -1,25 +1,20 @@
-
-
 export default function Footer() {
-
-
   return (
     <section className="footer">
       <div className="container mx-auto">
-        <footer className="d-flex flex-wrap justify-content-between align-items-center py-3">
-          <div className="col-md-12 align-items-center">
-
-            <span>National Research Platform</span>
+        <footer className="d-flex flex-wrap justify-content-between align-items-center py-4">
+          <div className="col-md-12 flex align-items-center items-center">
+            <img
+              src="/images/nsf-logo.png" // Replace with the actual path to the NSF logo
+              alt="NSF Logo"
+              className="h-12 mr-3"
+            />
+            <span className="text-sm text-gray-200">
+              This work was supported in part by National Science Foundation (NSF) awards CNS-1730158, ACI-1540112, ACI-1541349, OAC-1826967, OAC-2112167, CNS-2100237, CNS-2120019.
+            </span>
           </div>
-          {/*
-        <ul class="nav col-md-4 justify-content-end list-unstyled d-flex">
-          <li class="ms-3"><a class="text-muted" href="#"><svg class="bi" width="24" height="24"><use xlink:href="#twitter" /></svg></a></li>
-          <li class="ms-3"><a class="text-muted" href="#"><svg class="bi" width="24" height="24"><use xlink:href="#instagram" /></svg></a></li>
-          <li class="ms-3"><a class="text-muted" href="#"><svg class="bi" width="24" height="24"><use xlink:href="#facebook" /></svg></a></li>
-        </ul>
-        */}
         </footer>
       </div>
     </section>
-  )
+  );
 }
