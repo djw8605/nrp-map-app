@@ -57,6 +57,16 @@ async function DownloadPaginatedNodes(next_url) {
 }
 
 
+function ConvertOSGIID(osgId) {
+  // Function to convert the OSGID, for example "osg-htc.org_iid_06wup3aye2t7" to https://osg-htc.org/iid/06wup3aye2t7
+  if (!osgId) {
+    return "";
+  }
+  // Convert underscore to backslash
+  // prepend the "https://"
+  return "https://" + osgId.replace(/_/g, '/')
+}
+
 async function ConfigureNodes() {
   // First, get all nodes
   var nodes = await GetNodes();
@@ -80,6 +90,7 @@ async function ConfigureNodes() {
       gpus: node.metadata.labels['nvidia.com/gpu.count'] ? node.metadata.labels['nvidia.com/gpu.count'] : 0,
       gpuType: node.metadata.labels['nvidia.com/gpu.product'] ? node.metadata.labels['nvidia.com/gpu.product'] : "",
       cache: node.metadata.labels['nautilus.io/stashcache'] ? true : false,
+      osgId: node.metadata.labels['nautilus.io/OSGInstitutionID'] ? ConvertOSGIID(node.metadata.labels['nautilus.io/OSGInstitutionID']) : "",
     }
     //console.log(node);
     node_names.push(node_info);
