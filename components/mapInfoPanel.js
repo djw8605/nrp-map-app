@@ -193,21 +193,24 @@ function SiteStats({site}) {
 
   return (
     <Card className='mx-auto w-full p-0'>
-      <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1 lg:divide-x md:divide-x-0 sm:divide-x lg:divide-y-0 md:divide-y sm:divide-y-0 divide-y'>
-        {totalGpus > 0 && (
+      <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1'>
+        <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-r md:border-b-0 md:border-r lg:rounded-tl-lg">
+          {totalGpus > 0 && (
+            <MetricCard
+              title="GPU Hours"
+              value={data ? data.gpuHours.toLocaleString(undefined, {maximumFractionDigits: 0}) : null}
+              belowText="From previous week"
+              difference={data ? ((data.gpuHours - data.prevGpuHours) / data.prevGpuHours) : null}/>
+          )}
+        </div>
+        <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-l md:border-b-0 md:border-l lg:rounded-tr-lg">
           <MetricCard
-            title="GPU Hours"
-            value={data ? data.gpuHours.toLocaleString(undefined, {maximumFractionDigits: 0}) : null}
+            title="CPU Hours"
+            value={data ? data.cpuHours.toLocaleString(undefined, {maximumFractionDigits: 0}) : null}
             belowText="From previous week"
-            difference={data ? ((data.gpuHours - data.prevGpuHours) / data.prevGpuHours) : null}/>
-        )}
-
-        <MetricCard
-          title="CPU Hours"
-          value={data ? data.cpuHours.toLocaleString(undefined, {maximumFractionDigits: 0}) : null}
-          belowText="From previous week"
-          difference={data ? ((data.cpuHours - data.prevCpuHours) / data.prevCpuHours) : null}
-        />
+            difference={data ? ((data.cpuHours - data.prevCpuHours) / data.prevCpuHours) : null}
+          />
+        </div>
       </div>
     </Card>
   )
@@ -365,16 +368,17 @@ function SiteSelectBox({selectedSite, setSelectedSite}) {
 
   const formatOptionLabel = ({value, label, fullSite}) => (
 
-    <div className="flex flex-row gap-2 items-center">
+    <div className="flex flex-row gap-2 items-center text-black">
       <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-red-500 text-xl"/>
       <div>
         <h2 className="text-xl font-bold">{fullSite.name}</h2>
         {fullSite.name == fullSite.siteName ? null :
           <h6
-            className="whitespace-nowrap truncate text-tremor-default text-tremor-content group-hover:text-tremor-content-emphasis dark:text-dark-tremor-content opacity-100 dark:group-hover:text-dark-tremor-content-emphasis">{fullSite.siteName}</h6>}
+            className="whitespace-nowrap truncate text-tremor-default text-tremor-content group-hover:text-tremor-content-emphasis  opacity-100 ">{fullSite.siteName}</h6>}
       </div>
     </div>
   );
+  // dark:text-dark-tremor-content dark:group-hover:text-dark-tremor-content-emphasis
 
   return (
     <>
@@ -414,10 +418,12 @@ function DefaultInfoPanel({setSelectedSite, selectedSite}) {
   }, 0);
   
   return (
-    <div className="bg-white flex flex-col p-2">
+    <div className="flex flex-col p-2">
       <div className=''>
         <a href="https://nationalresearchplatform.org" target="_blank" rel="noopener noreferrer">
-          <img src="/images/NRP_LOGO-cropped.png" alt="NRP Logo" className='object-scale-down'/>
+          <img src="/images/NRP_LOGO-cropped.png" alt="NRP Logo" className='object-scale-down block dark:hidden'/>
+          <img src="/images/NRP_LOGO-cropped-dark.png" alt="NRP Logo" className='object-scale-down hidden dark:block'/>
+
         </a>
       </div>
       <div className='mt-1'>
@@ -436,27 +442,35 @@ function DefaultInfoPanel({setSelectedSite, selectedSite}) {
         <SiteSelectBox id="siteSelect" selectedSite={selectedSite} setSelectedSite={setSelectedSite}/>
       </div>
       <Card className='mx-auto w-full p-0 my-2'>
-        <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1 lg:divide-x sm:divide-x md:divide-y divide-y'>
-          <MetricCard
-            title="Sites"
-            value={totalSites.toLocaleString(undefined)}
-            belowText="Sites hosting NRP nodes"
+        <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1'>
+          <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-r md:border-b-0 md:border-r lg:rounded-tl-lg">
+            <MetricCard
+              title="Sites"
+              value={totalSites.toLocaleString(undefined)}
+              belowText="Sites hosting NRP nodes"
+              />
+          </div>
+          <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-l md:border-b-0 md:border-l lg:rounded-tr-lg">
+            <MetricCard
+              title="Nodes"
+              value={totalNodes.toLocaleString(undefined)}
+              belowText="Nodes registered in Kubernetes"
             />
-          <MetricCard
-            title="Nodes"
-            value={totalNodes.toLocaleString(undefined)}
-            belowText="Nodes registered in Kubernetes"
-          />
-          <MetricCard
-            title="GPUs"
-            value={totalGPUs.toLocaleString(undefined)}
-            belowText="Total GPUs across all nodes"
-          />
-          <MetricCard
-            title="CPU Cores"
-            value={totalCPUs.toLocaleString(undefined)}
-            belowText="Total CPU cores across all nodes"
-          />
+          </div>
+          <div className="border-t border-gray-200 dark:border-gray-700 lg:border-t lg:border-r md:border-t-0 md:border-r lg:rounded-bl-lg">
+            <MetricCard
+              title="GPUs"
+              value={totalGPUs.toLocaleString(undefined)}
+              belowText="Total GPUs across all nodes"
+            />
+          </div>
+          <div className="border-t border-gray-200 dark:border-gray-700 lg:border-t lg:border-l md:border-t-0 md:border-l lg:rounded-br-lg">
+            <MetricCard
+              title="CPU Cores"
+              value={totalCPUs.toLocaleString(undefined)}
+              belowText="Total CPU cores across all nodes"
+            />
+          </div>
         </div>
       </Card>
     </div>
@@ -488,7 +502,7 @@ export default function MapInfoPanel({site, setSelectedSite}) {
   // lg:w-96 overflow-scroll lg:top-1 lg:right-1 lg:absolute relative
   console.log(site);
   return (
-    <div className="bg-white p-2 md:p-0">
+    <div className="p-2 md:p-0">
       <div className='mb-2'>
         <SiteSelectBox selectedSite={site} setSelectedSite={setSelectedSite}/>
       </div>

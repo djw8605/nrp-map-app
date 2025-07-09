@@ -13,16 +13,16 @@ class SiteList extends React.Component {
 
     return (
       <>
-        <table className="table table-striped table-sm">
+        <table className="table table-striped table-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
           <thead>
             <tr>
-              <th colSpan="2">Collaborating Campuses</th>
+              <th colSpan="2" className="bg-blue-900 text-white dark:bg-gray-800 dark:text-gray-100">Collaborating Campuses</th>
             </tr>
           </thead>
           <tbody>
             {Sites.sites.map((site) => {
               return (
-                <tr key={site.name}>
+                <tr key={site.name} className="border-b border-gray-200 dark:border-gray-700">
                   <td className="logo-image">
                     {site.logo && <Image src={site.logo} layout={'fill'} objectFit={'contain'}/>
                     }

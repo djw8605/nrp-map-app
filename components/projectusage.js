@@ -11,7 +11,7 @@ function numberWithCommas(x) {
 
 function ExpandedRow({ data }) {
   return (
-    <div className='p-2 flex flex-col text-xs'>
+    <div className='p-2 flex flex-col text-xs bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'>
       <div>
         <span className='font-bold'>Namespace:</span> {data.Name}
       </div>
@@ -31,7 +31,7 @@ function ExpandedRow({ data }) {
 function DataTableLoading() {
   return (
     <>
-      <div className='flex justify-center items-center flex-col'>
+      <div className='flex justify-center items-center flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'>
         <div role="status" className='mt-3 flex flex-row items-center'>
           <div>
             <p className='text-sm font-medium text-gray-900 dark:text-white'>Loading Usage Information...</p>

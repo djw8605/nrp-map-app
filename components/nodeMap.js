@@ -109,8 +109,8 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
   // Create the legend
   const Legend = () => {
     return (
-      <div className='absolute bottom-4 right-1 bg-white p-2 rounded-lg shadow-lg'>
-        <ul className="list-none text-xs">
+      <div className="absolute bottom-4 right-1 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+        <ul className="list-none text-xs text-gray-900 dark:text-gray-100">
           <li className="flex flex-row items-center gap-2 mb-2">
             <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-sky-500"/>
             NRP Site

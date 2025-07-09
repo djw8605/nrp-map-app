@@ -37,10 +37,10 @@ export default function Home() {
 
       <section>
         <div className='container mx-auto grid grid-cols-1 md:grid-cols-3 md:gap-2 mt-1'>
-          <div className='md:col-span-2 col-span-1 md:min-h-[40em] min-h-[20em] rounded shadow-lg'>
+          <div className='md:col-span-2 col-span-1 md:min-h-[40em] min-h-[20em] rounded shadow-lg bg-white dark:bg-gray-900'>
             <NodeMap setSelectedSite={setSelectedSite} selectedSite={selectedSite} />
           </div>
-          <div className='md:col-span-1'>
+          <div className='md:col-span-1 col-span-1 bg-white dark:bg-gray-900'>
             <MapInfoPanel site={selectedSite} setSelectedSite={setSelectedSite} />
           </div>
         </div>

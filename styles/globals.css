@@ -2,3 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Add dark mode support for body and backgrounds */
+body {
+  @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+}
+
+/* Example for section backgrounds */
+section {
+  @apply bg-white dark:bg-gray-900;
+}
+
+/* Example for card backgrounds */
+.card {
+  @apply bg-white dark:bg-gray-800;
+}
+
+/* Example for table headers */
+thead {
+  @apply bg-blue-900 text-white dark:bg-gray-800 dark:text-gray-100;
+}
+
+/* Utility for border color in dark mode */
+.border {
+  @apply border-gray-200 dark:border-gray-700;
+}
+
+.header-footer-color {
+    @apply bg-blue-900 text-white;
+}
+
