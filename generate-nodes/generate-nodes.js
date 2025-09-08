@@ -99,6 +99,8 @@ function ConvertOSGIID(osgId) {
   // prepend the "https://"
   return "https://" + osgId.replace(/_/g, '/')
 }
+
+async function ConfigureNodes() {
   // First, get all nodes
   var nodes = await GetNodes();
 
