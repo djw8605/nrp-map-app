@@ -2,11 +2,12 @@ const k8s = require('@kubernetes/client-node');
 const geoip = require('geoip-lite');
 const axios = require('axios');
 var geohash = require('ngeohash');
+const AWS = require('aws-sdk');
 
 
 async function DownloadAllSites() {
   return new Promise((resolve, reject) => {
-    response = axios.get('http://netbox-4.nrp-nautilus.io/api/dcim/sites/', {
+    response = axios.get('https://netbox.nrp-nautilus.io/api/dcim/sites/', {
       params: {
         limit: 10000
       },
@@ -57,6 +58,44 @@ async function DownloadPaginatedNodes(next_url) {
 }
 
 
+async function uploadToR2(data) {
+  // Configure AWS SDK for Cloudflare R2  
+  // Environment variables needed:
+  // - CLOUDFLARE_ID: Account ID (specified in problem statement)  
+  // - CLOUDFLARE_ACCESS_KEY: R2 Access Key ID (specified in problem statement)
+  // - CLOUDFLARE_SECRET_ACCESS_KEY: R2 Secret Access Key (required for authentication)
+  const s3 = new AWS.S3({
+    accessKeyId: process.env.CLOUDFLARE_ACCESS_KEY,
+    secretAccessKey: process.env.CLOUDFLARE_SECRET_ACCESS_KEY,
+    endpoint: `https://${process.env.CLOUDFLARE_ID}.r2.cloudflarestorage.com`,
+    s3ForcePathStyle: true,
+    region: 'auto',
+    signatureVersion: 'v4'
+  });
+
+  const params = {
+    Bucket: 'nrp-dashboard',
+    Key: 'nodes.json',
+    Body: data,
+    ContentType: 'application/json',
+    ACL: 'public-read'
+  };
+
+  try {
+    const result = await s3.upload(params).promise();
+    console.log('Successfully uploaded nodes.json to Cloudflare R2:', result.Location);
+    // If a public R2 URL is configured, construct and log the public URL for the object
+    if (process.env.R2_PUBLIC_URL) {
+      const publicUrl = `${process.env.R2_PUBLIC_URL.replace(/\/$/, '')}/nodes.json`;
+      console.log('Public URL for nodes.json:', publicUrl);
+    }
+    return result;
+  } catch (error) {
+    console.error('Error uploading to Cloudflare R2:', error);
+    throw error;
+  }
+}
+
 function ConvertOSGIID(osgId) {
   // Function to convert the OSGID, for example "osg-htc.org_iid_06wup3aye2t7" to https://osg-htc.org/iid/06wup3aye2t7
   if (!osgId) {
@@ -97,7 +136,7 @@ async function ConfigureNodes() {
   });
 
   // Download all nodes from Netbox
-  var response = { next: 'http://netbox-4.nrp-nautilus.io/api/dcim/devices/' }
+  var response = { next: 'https://netbox-4.nrp-nautilus.io/api/dcim/devices/' }
     var results = new Array();
     while (response.next != null) {
       response = await DownloadPaginatedNodes(response.next);
@@ -174,10 +213,11 @@ async function ConfigureNodes() {
 
 
   //console.log(merged_sites);
-  const fs = require('fs');
   let data = JSON.stringify(Array.from(merged_sites.values()));
-  fs.writeFileSync('nodes.json', data);
-
+  
+  // Upload to Cloudflare R2 instead of writing to local file
+  await uploadToR2(data);
+  console.log('Nodes data uploaded successfully to Cloudflare R2');
 
   // For each of the nodes, query netbox for the site id
   //console.log(sites);

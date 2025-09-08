@@ -2,6 +2,7 @@
   "dependencies": {
     "@kubernetes/client-node": "^0.16.3",
     "geoip-lite": "^1.4.5",
-    "ngeohash": "^0.6.3"
+    "ngeohash": "^0.6.3",
+    "aws-sdk": "^2.1691.0"
   }
 }

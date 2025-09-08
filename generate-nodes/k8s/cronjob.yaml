@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: generate-nodes
+spec:
+  schedule: "0 */6 * * *"  # Run every 6 hours
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: generate-nodes
+          restartPolicy: Never
+          containers:
+          - name: generate-nodes
+            image: node:18-alpine
+            imagePullPolicy: IfNotPresent
+            resources:
+              requests:
+                memory: "4Gi"
+                cpu: "1000m"
+              limits:
+                memory: "4Gi"
+                cpu: "1000m"
+            envFrom:
+            - secretRef:
+                name: generate-nodes-secrets
+            env:
+            - name: NODE_ENV
+              value: "production"
+            command: ["/bin/sh","-c"]
+            args:
+              - |
+                apk add --no-cache git && \
+                git clone https://github.com/djw8605/nrp-map-app /tmp/repo && \
+                cd /tmp/repo/generate-nodes && \
+                # install only production deps to save time/storage
+                npm ci --production && \
+                node generate-nodes.js
+          nodeSelector:
+            kubernetes.io/os: linux
