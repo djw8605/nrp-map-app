@@ -31,8 +31,16 @@ async function DownloadAllSites() {
 
 async function GetNodes() {
   const kc = new k8s.KubeConfig();
-  kc.loadFromDefault();
-  kc.setCurrentContext('nautilus');
+  // Prefer in-cluster config (works from a CronJob/Pod). Fall back to default kubeconfig for local dev.
+  try {
+    kc.loadFromCluster();
+    console.log('Loaded in-cluster kubeconfig');
+  } catch (inClusterErr) {
+    console.log('In-cluster kubeconfig not available, falling back to default kubeconfig');
+    kc.loadFromDefault();
+    // Only set context for local testing if needed
+    try { kc.setCurrentContext('nautilus'); } catch (e) { /* ignore if not applicable */ }
+  }
   const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
   return k8sApi.listNode();
 
