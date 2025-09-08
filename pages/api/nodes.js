@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     // Fetch nodes.json from Cloudflare R2 public URL
     // The exact URL format depends on your R2 bucket configuration
     // This assumes a public bucket with custom domain or the default R2.dev format
-    const r2Url = process.env.R2_PUBLIC_URL || 'https://nrp-dashboard.r2.dev/nodes.json';
+    const r2Url = process.env.NODES_PUBLIC_URL || 'https://dash-api.nrp.ai/nodes.json';
     
     const response = await fetch(r2Url);
     

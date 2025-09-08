@@ -7,7 +7,7 @@ const AWS = require('aws-sdk');
 
 async function DownloadAllSites() {
   return new Promise((resolve, reject) => {
-    response = axios.get('http://netbox-4.nrp-nautilus.io/api/dcim/sites/', {
+    response = axios.get('https://netbox.nrp-nautilus.io/api/dcim/sites/', {
       params: {
         limit: 10000
       },
@@ -77,12 +77,18 @@ async function uploadToR2(data) {
     Bucket: 'nrp-dashboard',
     Key: 'nodes.json',
     Body: data,
-    ContentType: 'application/json'
+    ContentType: 'application/json',
+    ACL: 'public-read'
   };
 
   try {
     const result = await s3.upload(params).promise();
     console.log('Successfully uploaded nodes.json to Cloudflare R2:', result.Location);
+    // If a public R2 URL is configured, construct and log the public URL for the object
+    if (process.env.R2_PUBLIC_URL) {
+      const publicUrl = `${process.env.R2_PUBLIC_URL.replace(/\/$/, '')}/nodes.json`;
+      console.log('Public URL for nodes.json:', publicUrl);
+    }
     return result;
   } catch (error) {
     console.error('Error uploading to Cloudflare R2:', error);
@@ -130,7 +136,7 @@ async function ConfigureNodes() {
   });
 
   // Download all nodes from Netbox
-  var response = { next: 'http://netbox-4.nrp-nautilus.io/api/dcim/devices/' }
+  var response = { next: 'https://netbox-4.nrp-nautilus.io/api/dcim/devices/' }
     var results = new Array();
     while (response.next != null) {
       response = await DownloadPaginatedNodes(response.next);
