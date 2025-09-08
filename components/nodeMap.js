@@ -7,11 +7,13 @@ import Map, {
   NavigationControl,
 } from 'react-map-gl';
 import mapboxgl from 'mapbox-gl';
+import useSWR from 'swr';
 
-import Nodes from "../data/nodes.json"
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {faLocationDot, faExpand, faDatabase} from "@fortawesome/free-solid-svg-icons";
 import MapInfoPanel from "./mapInfoPanel";
+
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
 var siteIndex = 0;
 /*
@@ -54,10 +56,26 @@ function SummaryStat({ title, value }) {
 
 
 export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}) {
+  // Fetch nodes data from API
+  const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
 
   const uluru = { lat: 39.63517934689119, lng: -97.0739061397193 };
 
   const mapRef = useRef(null);
+
+  // Return loading state if data is not yet available
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-full">Loading map...</div>;
+  }
+
+  if (error) {
+    return <div className="flex items-center justify-center h-full">Error loading map data</div>;
+  }
+
+  if (!Nodes) {
+    return <div className="flex items-center justify-center h-full">No data available</div>;
+  }
+
   var markers = Array();
   for (const [key, value] of Object.entries(Nodes)) {
     markers.push(value);

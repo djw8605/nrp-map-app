@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: generate-nodes
+  namespace: default
+spec:
+  schedule: "0 */6 * * *"  # Run every 6 hours
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: generate-nodes
+          restartPolicy: Never
+          containers:
+          - name: generate-nodes
+            image: generate-nodes:latest
+            imagePullPolicy: Always
+            resources:
+              requests:
+                memory: "4Gi"
+                cpu: "1000m"
+              limits:
+                memory: "4Gi"
+                cpu: "1000m"
+            envFrom:
+            - secretRef:
+                name: generate-nodes-secrets
+            env:
+            - name: NODE_ENV
+              value: "production"
+            command: ["node"]
+            args: ["generate-nodes.js"]
+          nodeSelector:
+            kubernetes.io/os: linux
