@@ -7,11 +7,13 @@ import Map, {
   NavigationControl,
 } from 'react-map-gl';
 import mapboxgl from 'mapbox-gl';
+import useSWR from 'swr';
 
-import Nodes from "../data/nodes.json"
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {faLocationDot, faExpand, faDatabase} from "@fortawesome/free-solid-svg-icons";
 import MapInfoPanel from "./mapInfoPanel";
+
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
 var siteIndex = 0;
 /*
@@ -54,34 +56,31 @@ function SummaryStat({ title, value }) {
 
 
 export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}) {
+  // Fetch nodes data from API
+  const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
 
   const uluru = { lat: 39.63517934689119, lng: -97.0739061397193 };
 
   const mapRef = useRef(null);
-  var markers = Array();
-  for (const [key, value] of Object.entries(Nodes)) {
-    markers.push(value);
-  }
 
-  const initialViewState = {
-    longitude: -97.0739061397193,
-    latitude: 39.63517934689119,
-    zoom: 3
-  }
-
-  //console.log(markers);
-  // <img src={site.logo} alt={site.name} className='object-scale-down h-10 w-10' />
-  //const [popupInfo, setPopupInfo] = useState(null);
+  // Build pins at top-level so hooks order is stable across renders
   const pins = useMemo(() => {
+    if (!Nodes) return [];
+    const markers = [];
+    for (const [key, value] of Object.entries(Nodes)) {
+      markers.push(value);
+    }
+
     return markers.map((node) => {
       // Check if all the nodes in the site are cache nodes
       let allCache = true;
-      for (var i = 0; i < node.nodes.length; i++) {
+      for (let i = 0; i < node.nodes.length; i++) {
         if (!node.nodes[i].cache) {
           allCache = false;
           break;
         }
       }
+
       return (
         <Marker key={node.id}
           longitude={node.longitude}
@@ -89,11 +88,7 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
           anchor="bottom"
           onClick={(e) => {
             e.originalEvent.stopPropagation();
-            console.log(node);
             setSelectedSite(node);
-          }}
-          onMouseEnter={(e) => {
-            console.log('enter: ' + node);
           }}
         >
           {allCache ?
@@ -102,9 +97,42 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
             <FontAwesomeIcon icon={faLocationDot} size="2x" className={`map-pin cursor-pointer ${node == selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"}`} />
           }
         </Marker>
-      )
+      );
     });
-  }, [selectedSite]);
+  }, [Nodes, selectedSite, setSelectedSite]);
+
+  // Update pin sizes whenever mapRef, Nodes, or selectedSite change
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const updateSizes = () => {
+      const elems = document.getElementsByClassName('map-pin');
+      const zoom = mapRef.current?.getMap?.()?.getZoom?.() ?? 1;
+      for (let i = 0; i < elems.length; i++) {
+        elems[i].style.width = Math.max(Math.min(9 * zoom, 30), 7) + 'px';
+        elems[i].style.height = Math.max(Math.min(9 * zoom, 30), 7) + 'px';
+      }
+    };
+    updateSizes();
+  }, [Nodes, selectedSite, mapRef]);
+
+  // Return loading state if data is not yet available
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-full">Loading map...</div>;
+  }
+
+  if (error) {
+    return <div className="flex items-center justify-center h-full">Error loading map data</div>;
+  }
+
+  if (!Nodes) {
+    return <div className="flex items-center justify-center h-full">No data available</div>;
+  }
+
+  const initialViewState = {
+    longitude: -97.0739061397193,
+    latitude: 39.63517934689119,
+    zoom: 3
+  }
 
   // Create the legend
   const Legend = () => {
@@ -125,17 +153,7 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
     );
   };
 
-  // On initial load, set the size of the pins
-  useEffect(() => {
-    var markers = document.getElementsByClassName('map-pin');
-    for (var i = 0; i < markers.length; i++) {
-      markers[i].style.width = Math.max(Math.min(9 * mapRef.current.getMap().getZoom(), 30), 7) + 'px';
-      markers[i].style.height = Math.max(Math.min(9 * mapRef.current.getMap().getZoom(), 30), 7) + 'px';
-    }
-  }, []);
-
   //
-//
   // <MapMover />
   return (
     <>

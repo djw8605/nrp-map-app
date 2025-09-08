@@ -1,5 +1,4 @@
 import React from "react";
-import Sites from "../data/sites.json"
 import Image from 'next/image'
 
 class SiteList extends React.Component {

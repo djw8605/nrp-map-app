@@ -13,7 +13,6 @@ import {
 import useSWR from 'swr'
 import {Badge, BarChart, Card, SparkAreaChart, DonutChart, Legend, BadgeDelta} from '@tremor/react';
 import {RiCpuLine, RiServerLine, RiDatabase2Line} from '@remixicon/react';
-import Nodes from "../data/nodes.json"
 import Select from 'react-select'
 import {useState, useEffect, useMemo} from 'react';
 
@@ -340,6 +339,9 @@ function SiteGpuTypes({site}) {
 }
 
 function SiteSelectBox({selectedSite, setSelectedSite}) {
+  // Fetch nodes data from API
+  const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
+
   const internalSetSelectedSite = ({value, label, fullSite}) => {
     // Find the site from the slug
     //let newSelectedSite = Nodes.find((node) => node.slug == site);
@@ -356,8 +358,12 @@ function SiteSelectBox({selectedSite, setSelectedSite}) {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
-    return null;
+  if (!isMounted || isLoading) {
+    return <div>Loading sites...</div>;
+  }
+
+  if (error || !Nodes) {
+    return <div>Error loading sites</div>;
   }
 
   const options = Nodes.map((node) => {
@@ -396,7 +402,18 @@ function SiteSelectBox({selectedSite, setSelectedSite}) {
 
 
 function DefaultInfoPanel({setSelectedSite, selectedSite}) {
+  // Fetch nodes data from API
+  const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
+
   // max-h-[30em] lg:w-80 overflow-scroll lg:top-1 lg:right-1 lg:absolute
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center p-4">Loading...</div>;
+  }
+
+  if (error || !Nodes) {
+    return <div className="flex items-center justify-center p-4">Error loading data</div>;
+  }
 
   // Count the number of sits in the nodes
   let totalNodes = Nodes.reduce((acc, site) => {
