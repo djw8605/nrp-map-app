@@ -35,6 +35,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Build and optionally push
+        id: push
         uses: docker/build-push-action@v5
         with:
           context: ./generate-nodes
@@ -47,6 +48,7 @@ jobs:
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v3
+        if: ${{ github.ref == 'refs/heads/main' && steps.push.outputs.digest != '' }}
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
           subject-digest: ${{ steps.push.outputs.digest }}
