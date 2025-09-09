@@ -13,18 +13,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {faLocationDot, faExpand, faDatabase} from "@fortawesome/free-solid-svg-icons";
 import MapInfoPanel from "./mapInfoPanel";
 
-//const fetcher = (url) => fetch(url).then((res) => res.json());
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
-const fetcher = (url) =>
-  new Promise((resolve, reject) => {
-    const delayMs = 3000000; // simulate 3s network latency
-    setTimeout(() => {
-      fetch(url)
-        .then((res) => res.json())
-        .then(resolve)
-        .catch(reject);
-    }, delayMs);
-  });
 
 var siteIndex = 0;
 /*
