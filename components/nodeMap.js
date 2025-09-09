@@ -63,6 +63,7 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
   const uluru = { lat: 39.63517934689119, lng: -97.0739061397193 };
 
   const mapRef = useRef(null);
+  const [zoom, setZoom] = useState(3);
 
   // Build pins at top-level so hooks order is stable across renders
   const pins = useMemo(() => {
@@ -71,6 +72,8 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
     for (const [key, value] of Object.entries(Nodes)) {
       markers.push(value);
     }
+
+    const computedSize = Math.max(Math.min(9 * (zoom || 1), 30), 7);
 
     return markers.map((node) => {
       // Check if all the nodes in the site are cache nodes
@@ -81,6 +84,8 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
           break;
         }
       }
+
+      const iconStyle = { width: `${computedSize}px`, height: `${computedSize}px` };
 
       return (
         <Marker key={node.id}
@@ -93,28 +98,14 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
           }}
         >
           {allCache ?
-            <FontAwesomeIcon icon={faDatabase} size="2x" className={`map-pin cursor-pointer ${node == selectedSite ? "text-red-500 z-10" : "text-green-500 z-0"}`} />
+            <FontAwesomeIcon icon={faDatabase} style={iconStyle} className={`map-pin cursor-pointer ${node === selectedSite ? "text-red-500 z-10" : "text-green-500 z-0"}`} />
             :
-            <FontAwesomeIcon icon={faLocationDot} size="2x" className={`map-pin cursor-pointer ${node == selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"}`} />
+            <FontAwesomeIcon icon={faLocationDot} style={iconStyle} className={`map-pin cursor-pointer ${node === selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"}`} />
           }
         </Marker>
       );
     });
-  }, [Nodes, selectedSite, setSelectedSite]);
-
-  // Update pin sizes whenever mapRef, Nodes, or selectedSite change
-  useEffect(() => {
-    if (!mapRef.current) return;
-    const updateSizes = () => {
-      const elems = document.getElementsByClassName('map-pin');
-      const zoom = mapRef.current?.getMap?.()?.getZoom?.() ?? 1;
-      for (let i = 0; i < elems.length; i++) {
-        elems[i].style.width = Math.max(Math.min(9 * zoom, 30), 7) + 'px';
-        elems[i].style.height = Math.max(Math.min(9 * zoom, 30), 7) + 'px';
-      }
-    };
-    updateSizes();
-  }, [Nodes, selectedSite, mapRef]);
+  }, [Nodes, selectedSite, zoom, setSelectedSite]);
 
   // Return loading state if data is not yet available
   if (isLoading) {
@@ -176,14 +167,8 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
           onClick={(e) => {
             setSelectedSite(null);
           }}
-          
-          onZoom={(e) => {
-            // Loop through the pins and adjust the size of the icons
-            var markers = document.getElementsByClassName('map-pin');
-            for (var i = 0; i < markers.length; i++) {
-              markers[i].style.width = Math.max(Math.min(9 * mapRef.current.getMap().getZoom(), 30), 7) + 'px';
-              markers[i].style.height = Math.max(Math.min(9 * mapRef.current.getMap().getZoom(), 30), 7) + 'px';
-            }
+          onMove={(e) => {
+            setZoom(e.viewState?.zoom ?? zoom);
           }}
 
         >
