@@ -15,6 +15,8 @@ import {Badge, BarChart, Card, SparkAreaChart, DonutChart, Legend, BadgeDelta} f
 import {RiCpuLine, RiServerLine, RiDatabase2Line} from '@remixicon/react';
 import Select from 'react-select'
 import {useState, useEffect, useMemo} from 'react';
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
@@ -155,8 +157,13 @@ function MetricCard({title, value, belowText, difference}) {
         <p className="text-tremor-default font-medium text-tremor-content dark:text-dark-tremor-content ">
           {title}
         </p>
-        {!value ? (
-          <LoadingElement/>
+        {value == null ? (
+          <div className='p-2'>
+            <Skeleton height={28} width={160} />
+            <div className='mt-2'>
+              <Skeleton height={12} width={110} />
+            </div>
+          </div>
         ) : (
           <>
             <p className="text-tremor-metric font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
@@ -343,9 +350,6 @@ function SiteSelectBox({selectedSite, setSelectedSite}) {
   const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
 
   const internalSetSelectedSite = ({value, label, fullSite}) => {
-    // Find the site from the slug
-    //let newSelectedSite = Nodes.find((node) => node.slug == site);
-    //console.log(newSelectedSite);
     console.log("Setting selected site");
     console.log(fullSite);
     console.log(value);
@@ -358,8 +362,20 @@ function SiteSelectBox({selectedSite, setSelectedSite}) {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted || isLoading) {
-    return <div>Loading sites...</div>;
+  if (!isMounted) {
+    return null;
+  }
+
+  // Show skeletons while nodes are loading
+  if (isLoading) {
+    return (
+      <div className="w-full">
+        <Skeleton height={44} />
+        <div className="mt-2">
+          <Skeleton height={12} width={200} />
+        </div>
+      </div>
+    );
   }
 
   if (error || !Nodes) {
@@ -384,7 +400,6 @@ function SiteSelectBox({selectedSite, setSelectedSite}) {
       </div>
     </div>
   );
-  // dark:text-dark-tremor-content dark:group-hover:text-dark-tremor-content-emphasis
 
   return (
     <>
@@ -402,38 +417,30 @@ function SiteSelectBox({selectedSite, setSelectedSite}) {
 
 
 function DefaultInfoPanel({setSelectedSite, selectedSite}) {
-  // Fetch nodes data from API
   const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
 
-  // max-h-[30em] lg:w-80 overflow-scroll lg:top-1 lg:right-1 lg:absolute
-
-  if (isLoading) {
-    return <div className="flex items-center justify-center p-4">Loading...</div>;
+  // Compute aggregates only when Nodes are available
+  let totalNodes = null;
+  let totalSites = null;
+  let totalGPUs = null;
+  let totalCPUs = null;
+  if (Nodes) {
+    totalNodes = Nodes.reduce((acc, site) => {
+      return acc + parseInt(site.nodes.length);
+    }, 0);
+    totalSites = Nodes.length;
+    totalGPUs = Nodes.reduce((acc, site) => {
+      return acc + site.nodes.reduce((nodeAcc, node) => {
+        return nodeAcc + (parseInt(node.gpus) || 0);
+      }, 0);
+    }, 0);
+    totalCPUs = Nodes.reduce((acc, site) => {
+      return acc + site.nodes.reduce((nodeAcc, node) => {
+        return nodeAcc + (parseInt(node.cpus) || 0);
+      }, 0);
+    }, 0);
   }
 
-  if (error || !Nodes) {
-    return <div className="flex items-center justify-center p-4">Error loading data</div>;
-  }
-
-  // Count the number of sits in the nodes
-  let totalNodes = Nodes.reduce((acc, site) => {
-    return acc + parseInt(site.nodes.length);
-  }, 0);
-  let totalSites = Nodes.length;
-
-  // Calculate total GPUs and CPUs
-  let totalGPUs = Nodes.reduce((acc, site) => {
-    return acc + site.nodes.reduce((nodeAcc, node) => {
-      return nodeAcc + (parseInt(node.gpus) || 0);
-    }, 0);
-  }, 0);
-
-  let totalCPUs = Nodes.reduce((acc, site) => {
-    return acc + site.nodes.reduce((nodeAcc, node) => {
-      return nodeAcc + (parseInt(node.cpus) || 0);
-    }, 0);
-  }, 0);
-  
   return (
     <div className="flex flex-col p-2">
       <div className=''>
@@ -463,28 +470,28 @@ function DefaultInfoPanel({setSelectedSite, selectedSite}) {
           <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-r md:border-b-0 md:border-r lg:rounded-tl-lg">
             <MetricCard
               title="Sites"
-              value={totalSites.toLocaleString(undefined)}
+              value={totalSites != null ? totalSites.toLocaleString(undefined) : null}
               belowText="Sites hosting NRP nodes"
               />
           </div>
           <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-l md:border-b-0 md:border-l lg:rounded-tr-lg">
             <MetricCard
               title="Nodes"
-              value={totalNodes.toLocaleString(undefined)}
+              value={totalNodes != null ? totalNodes.toLocaleString(undefined) : null}
               belowText="Nodes registered in Kubernetes"
             />
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700 lg:border-t lg:border-r md:border-t-0 md:border-r lg:rounded-bl-lg">
             <MetricCard
               title="GPUs"
-              value={totalGPUs.toLocaleString(undefined)}
+              value={totalGPUs != null ? totalGPUs.toLocaleString(undefined) : null}
               belowText="Total GPUs across all nodes"
             />
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700 lg:border-t lg:border-l md:border-t-0 md:border-l lg:rounded-br-lg">
             <MetricCard
               title="CPU Cores"
-              value={totalCPUs.toLocaleString(undefined)}
+              value={totalCPUs != null ? totalCPUs.toLocaleString(undefined) : null}
               belowText="Total CPU cores across all nodes"
             />
           </div>

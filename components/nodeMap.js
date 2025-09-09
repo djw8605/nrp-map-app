@@ -13,7 +13,18 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {faLocationDot, faExpand, faDatabase} from "@fortawesome/free-solid-svg-icons";
 import MapInfoPanel from "./mapInfoPanel";
 
-const fetcher = (url) => fetch(url).then((res) => res.json());
+//const fetcher = (url) => fetch(url).then((res) => res.json());
+
+const fetcher = (url) =>
+  new Promise((resolve, reject) => {
+    const delayMs = 3000000; // simulate 3s network latency
+    setTimeout(() => {
+      fetch(url)
+        .then((res) => res.json())
+        .then(resolve)
+        .catch(reject);
+    }, delayMs);
+  });
 
 var siteIndex = 0;
 /*
@@ -117,7 +128,16 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
 
   // Return loading state if data is not yet available
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full">Loading map...</div>;
+    return (
+      <div className="loader-wrapper h-full">
+        <div className="concentric-loader" aria-hidden="true">
+          <div className="loading-ring loading-ring-1"></div>
+          <div className="loading-ring loading-ring-2"></div>
+          <div className="loading-ring loading-ring-3"></div>
+          <div className="loader-text">Loading map...</div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
