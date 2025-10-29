@@ -345,6 +345,100 @@ function SiteGpuTypes({site}) {
   )
 }
 
+function SiteMultiSelectBox({selectedSites=[], setSelectedSites}) {
+  const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted || isLoading || !Nodes) {
+    return (
+      <div className="w-full">
+        <Skeleton height={44} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>Error loading sites</div>;
+  }
+
+  const options = Nodes.map((node) => {
+    return (
+      {value: node.id, label: node.name, fullSite: node}
+    )
+  });
+
+  const formatOptionLabel = ({value, label, fullSite}) => (
+    <div className="flex flex-row gap-2 items-center text-black">
+      <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-red-500 text-xl"/>
+      <div>
+        <h2 className="text-xl font-bold">{fullSite.name}</h2>
+        {fullSite.name == fullSite.siteName ? null :
+          <h6
+            className="whitespace-nowrap truncate text-tremor-default text-tremor-content group-hover:text-tremor-content-emphasis  opacity-100 ">{fullSite.siteName}</h6>}
+      </div>
+    </div>
+  );
+
+  const selectedOptions = selectedSites.map(site => {
+    return options.find(opt => opt.value === site.id);
+  }).filter(Boolean);
+
+  const customStyles = {
+    control: (provided, state) => ({
+      ...provided,
+      minHeight: '38px',
+      maxHeight: '120px',
+      overflowY: 'auto',
+      overflowX: 'hidden',
+    }),
+    valueContainer: (provided) => ({
+      ...provided,
+      maxHeight: '118px',
+      overflowY: 'auto',
+      paddingTop: '2px',
+      paddingBottom: '2px',
+    }),
+    multiValue: (provided) => ({
+      ...provided,
+      maxWidth: 'calc(100% - 10px)',
+      margin: '2px',
+    }),
+    menu: (provided) => ({
+      ...provided,
+      maxHeight: '200px',
+      zIndex: 9999,
+    }),
+    menuList: (provided) => ({
+      ...provided,
+      maxHeight: '200px',
+      overflowY: 'auto',
+    }),
+  };
+
+  return (
+    <>
+      <Select
+        isMulti
+        options={options}
+        formatOptionLabel={formatOptionLabel}
+        onChange={(selectedOptions) => {
+          if (!setSelectedSites) return;
+          const selected = selectedOptions ? selectedOptions.map(opt => opt.fullSite) : [];
+          setSelectedSites(selected);
+        }}
+        value={selectedOptions}
+        placeholder="Select multiple sites..."
+        styles={customStyles}
+      >
+      </Select>
+    </>
+  )
+}
+
 function SiteSelectBox({selectedSite, setSelectedSite}) {
   // Fetch nodes data from API
   const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
@@ -416,7 +510,7 @@ function SiteSelectBox({selectedSite, setSelectedSite}) {
 }
 
 
-function DefaultInfoPanel({setSelectedSite, selectedSite}) {
+function DefaultInfoPanel({setSelectedSite, selectedSite, selectedSites=[], setSelectedSites, selectionLegendName='Selected Sites', setSelectionLegendName, regexPattern='', handleRegexChange, regexError}) {
   const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
 
   // Compute aggregates only when Nodes are available
@@ -465,6 +559,69 @@ function DefaultInfoPanel({setSelectedSite, selectedSite}) {
           or click on a site in the map</label>
         <SiteSelectBox id="siteSelect" selectedSite={selectedSite} setSelectedSite={setSelectedSite}/>
       </div>
+      
+      <div className='my-2'>
+        <label htmlFor="multiSiteSelect"
+               className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">Map Customization - Select Multiple Sites</label>
+        <SiteMultiSelectBox 
+          id="multiSiteSelect" 
+          selectedSites={selectedSites} 
+          setSelectedSites={setSelectedSites}
+        />
+      </div>
+      
+      <div className='my-2'>
+        <label htmlFor="regexSelect"
+               className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">Or select by Regex pattern</label>
+        <input
+          id="regexSelect"
+          type="text"
+          value={regexPattern}
+          onChange={(e) => handleRegexChange && handleRegexChange(e.target.value)}
+          placeholder="e.g., chicago|boulder|^ucsd.*"
+          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md 
+                   bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100
+                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        {regexError && (
+          <span className="text-xs text-red-500 dark:text-red-400 block mt-1">
+            {regexError}
+          </span>
+        )}
+        {regexPattern && !regexError && selectedSites.length > 0 && (
+          <span className="text-xs text-green-600 dark:text-green-400 block mt-1">
+            Selected {selectedSites.length} site{selectedSites.length !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+
+      {selectedSites.length > 0 && (
+        <div className='my-2'>
+          <label htmlFor="legendLabel"
+                 className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">Label for red pins (Legend)</label>
+          <input
+            id="legendLabel"
+            type="text"
+            value={selectionLegendName}
+            onChange={(e) => setSelectionLegendName && setSelectionLegendName(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md 
+                     bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      )}
+
+      {selectedSites.length > 0 && (
+        <button
+          onClick={() => {
+            if (setSelectedSites) setSelectedSites([]);
+            if (handleRegexChange) handleRegexChange('');
+          }}
+          className="w-full px-3 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors mt-2"
+        >
+          Clear Selection ({selectedSites.length})
+        </button>
+      )}
       <Card className='mx-auto w-full p-0 my-2'>
         <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1'>
           <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-r md:border-b-0 md:border-r lg:rounded-tl-lg">
@@ -501,11 +658,21 @@ function DefaultInfoPanel({setSelectedSite, selectedSite}) {
   )
 }
 
-export default function MapInfoPanel({site, setSelectedSite}) {
+export default function MapInfoPanel({site, setSelectedSite, selectedSites=[], setSelectedSites, selectionLegendName='Selected Sites', setSelectionLegendName, regexPattern='', handleRegexChange, regexError}) {
   if (!site) {
     return (
       <>
-        <DefaultInfoPanel selectedSite={site} setSelectedSite={setSelectedSite}/>
+        <DefaultInfoPanel 
+          selectedSite={site} 
+          setSelectedSite={setSelectedSite}
+          selectedSites={selectedSites}
+          setSelectedSites={setSelectedSites}
+          selectionLegendName={selectionLegendName}
+          setSelectionLegendName={setSelectionLegendName}
+          regexPattern={regexPattern}
+          handleRegexChange={handleRegexChange}
+          regexError={regexError}
+        />
       </>
     );
   }
