@@ -56,7 +56,7 @@ function SummaryStat({ title, value }) {
 
 
 
-export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}) {
+export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false, selectedSites=[], setSelectedSites, selectionLegendName='Selected Sites', regexPattern='', handleRegexChange}) {
   // Fetch nodes data from API
   const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
 
@@ -64,6 +64,24 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
 
   const mapRef = useRef(null);
   const [zoom, setZoom] = useState(3);
+
+  // Helper to check if a site is selected
+  const isSiteSelected = (node) => {
+    return selectedSites && selectedSites.some(s => s.id === node.id);
+  };
+
+  // Helper to toggle site selection
+  const toggleSiteSelection = (node) => {
+    if (!setSelectedSites) return;
+    setSelectedSites(prev => {
+      const isSelected = prev.some(s => s.id === node.id);
+      if (isSelected) {
+        return prev.filter(s => s.id !== node.id);
+      } else {
+        return [...prev, node];
+      }
+    });
+  };
 
   // Build pins at top-level so hooks order is stable across renders
   const pins = useMemo(() => {
@@ -85,7 +103,33 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
         }
       }
 
-      const iconStyle = { width: `${computedSize}px`, height: `${computedSize}px` };
+      const computedSelectedSize = Math.max(Math.min(9 * (zoom || 1) * 1.3, 35), 9);
+      
+      // Determine colors based on node type
+      let pinColor = "text-sky-500"; // Default NRP blue
+      if (allCache) {
+        pinColor = "text-green-500"; // OSDF green
+      }
+      
+      // Check selection state - multi-selected sites are red
+      const isSelected = node === selectedSite;
+      const isMultiSelected = isSiteSelected(node);
+      
+      if (isMultiSelected) {
+        pinColor = "text-red-500"; // Red for multi-selected sites
+      }
+      
+      // Selection styling
+      let selectionClass = "";
+      let finalSize = computedSize;
+      if (isMultiSelected) {
+        selectionClass = "drop-shadow-lg";
+        finalSize = computedSelectedSize;
+      }
+      const zIndex = (isSelected || isMultiSelected) ? "z-10" : "z-0";
+      const finalColor = `${pinColor} ${zIndex} ${selectionClass}`;
+      
+      const iconStyle = { width: `${finalSize}px`, height: `${finalSize}px` };
 
       return (
         <Marker key={node.id}
@@ -94,18 +138,23 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
           anchor="bottom"
           onClick={(e) => {
             e.originalEvent.stopPropagation();
-            setSelectedSite(node);
+            // Ctrl/Cmd + Click for multi-select, regular click for single select
+            if (e.originalEvent.ctrlKey || e.originalEvent.metaKey) {
+              toggleSiteSelection(node);
+            } else {
+              setSelectedSite(node);
+            }
           }}
         >
           {allCache ?
-            <FontAwesomeIcon icon={faDatabase} style={iconStyle} className={`map-pin cursor-pointer ${node === selectedSite ? "text-red-500 z-10" : "text-green-500 z-0"}`} />
+            <FontAwesomeIcon icon={faDatabase} style={iconStyle} className={`map-pin cursor-pointer ${finalColor}`} />
             :
-            <FontAwesomeIcon icon={faLocationDot} style={iconStyle} className={`map-pin cursor-pointer ${node === selectedSite ? "text-red-500 z-10" : "text-sky-500 z-0"}`} />
+            <FontAwesomeIcon icon={faLocationDot} style={iconStyle} className={`map-pin cursor-pointer ${finalColor}`} />
           }
         </Marker>
       );
     });
-  }, [Nodes, selectedSite, zoom, setSelectedSite]);
+  }, [Nodes, selectedSite, zoom, setSelectedSite, selectedSites]);
 
   // Return loading state if data is not yet available
   if (isLoading) {
@@ -135,6 +184,7 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
     zoom: 3
   }
 
+
   // Create the legend
   const Legend = () => {
     return (
@@ -144,10 +194,16 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false}
             <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-sky-500"/>
             NRP Site
           </li>
-          <li className="flex flex-row items-center gap-2">
+          <li className="flex flex-row items-center gap-2 mb-2">
             <FontAwesomeIcon icon={faDatabase} size="2x" className="text-green-500"/>
             OSDF-exclusive Site
           </li>
+          {selectedSites && selectedSites.length > 0 && (
+            <li className="flex flex-row items-center gap-2 border-t border-gray-300 dark:border-gray-600 pt-2 mt-2">
+              <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-red-500"/>
+              {selectionLegendName}
+            </li>
+          )}
         </ul>
 
       </div>
