@@ -1,5 +1,17 @@
 // API endpoint to fetch nodes.json from Cloudflare R2
 export default async function handler(req, res) {
+  // CORS: allow all origins to access this endpoint
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    // 204 No Content is typical for preflight responses
+    res.status(204).end();
+    return;
+  }
+
   try {
     // Fetch nodes.json from Cloudflare R2 public URL
     // The exact URL format depends on your R2 bucket configuration
@@ -21,6 +33,7 @@ export default async function handler(req, res) {
     
   } catch (error) {
     console.error('Error fetching nodes from Cloudflare R2:', error);
+    // Ensure CORS headers are present on errors as well
     res.status(500).json({ error: 'Failed to fetch nodes data' });
   }
 }

@@ -21,6 +21,14 @@ npm install
 npm run dev
 ```
 
+### CORS
+
+The API route `/api/nodes` enables permissive CORS to allow access from any origin. This supports external sites embedding or fetching node data directly. Preflight `OPTIONS` requests are handled and the following headers are returned on requests to this route:
+
+- `Access-Control-Allow-Origin: *`
+- `Access-Control-Allow-Methods: GET,OPTIONS`
+- `Access-Control-Allow-Headers: Content-Type`
+
 ## Node Generation
 
 The `generate-nodes` directory contains a Node.js script that:
