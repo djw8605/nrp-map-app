@@ -13,12 +13,49 @@ import { GPUMetrics, CPUMetrics, NamespaceMetrics, ClusterMetrics } from '../com
 import MapInfoPanel from '../components/mapInfoPanel'
 import { useState } from 'react'
 import { Card } from '@tremor/react'
+import useSWR from 'swr'
+
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function Home() {
 
   // Use state to save the selected site
   const [selectedSite, setSelectedSite] = useState(null);
   const [mapStyle, setMapStyle] = useState('default');
+  const [selectedSites, setSelectedSites] = useState([]);
+  const [selectionLegendName, setSelectionLegendName] = useState('Selected Sites');
+  const [regexPattern, setRegexPattern] = useState('');
+  const [regexError, setRegexError] = useState('');
+  
+  // Fetch nodes for regex matching
+  const { data: Nodes } = useSWR('/api/nodes', fetcher);
+
+  // Handle regex pattern change for selection
+  const handleRegexChange = (pattern) => {
+    setRegexPattern(pattern);
+    
+    if (!pattern || !Nodes) {
+      setRegexError('');
+      if (!pattern) {
+        setSelectedSites([]);
+      }
+      return;
+    }
+    
+    try {
+      const regex = new RegExp(pattern, 'i');
+      const matchingSites = [];
+      for (const [key, value] of Object.entries(Nodes)) {
+        if (regex.test(value.name) || regex.test(value.slug) || (value.description && regex.test(value.description))) {
+          matchingSites.push(value);
+        }
+      }
+      setSelectedSites(matchingSites);
+      setRegexError('');
+    } catch (e) {
+      setRegexError('Invalid regular expression');
+    }
+  };
 
   return (
     <>
@@ -37,11 +74,29 @@ export default function Home() {
 
       <section>
         <div className='container mx-auto grid grid-cols-1 md:grid-cols-3 md:gap-2 mt-1'>
-          <div className='md:col-span-2 col-span-1 md:min-h-[40em] min-h-[20em] rounded shadow-lg bg-white dark:bg-gray-900'>
-            <NodeMap setSelectedSite={setSelectedSite} selectedSite={selectedSite} />
+          <div className='md:col-span-2 col-span-1 md:h-[40em] h-[20em] rounded shadow-lg bg-white dark:bg-gray-900 overflow-hidden'>
+            <NodeMap 
+              setSelectedSite={setSelectedSite} 
+              selectedSite={selectedSite}
+              selectedSites={selectedSites}
+              setSelectedSites={setSelectedSites}
+              selectionLegendName={selectionLegendName}
+              regexPattern={regexPattern}
+              handleRegexChange={handleRegexChange}
+            />
           </div>
           <div className='md:col-span-1 col-span-1 bg-white dark:bg-gray-900'>
-            <MapInfoPanel site={selectedSite} setSelectedSite={setSelectedSite} />
+            <MapInfoPanel 
+              site={selectedSite} 
+              setSelectedSite={setSelectedSite}
+              selectedSites={selectedSites}
+              setSelectedSites={setSelectedSites}
+              selectionLegendName={selectionLegendName}
+              setSelectionLegendName={setSelectionLegendName}
+              regexPattern={regexPattern}
+              handleRegexChange={handleRegexChange}
+              regexError={regexError}
+            />
           </div>
         </div>
 
