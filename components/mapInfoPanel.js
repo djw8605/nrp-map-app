@@ -11,7 +11,7 @@ import {
   faChartColumn, faCircleArrowUp, faCircleArrowDown
 } from "@fortawesome/free-solid-svg-icons";
 import useSWR from 'swr'
-import {Badge, BarChart, Card, SparkAreaChart, DonutChart, Legend, BadgeDelta} from '@tremor/react';
+import {Badge, BarChart, Card, SparkAreaChart, BadgeDelta} from '@tremor/react';
 import {RiCpuLine, RiServerLine, RiDatabase2Line} from '@remixicon/react';
 import Select from 'react-select'
 import {useState, useEffect, useMemo} from 'react';
@@ -95,9 +95,9 @@ function NetworkCard({data, currentValue, title, icon, iconColor, graphColor}) {
 
 }
 
-function SiteNetworkStats({site}) {
+function SiteNetworkStats({site, timeRange = '24h'}) {
 
-  const {data, error} = useSWR(`/api/sitenetwork?site=${site.slug}`, fetcher, {refreshInterval: 60000});
+  const {data, error} = useSWR(`/api/sitenetwork?site=${site.slug}&range=${timeRange}`, fetcher, {refreshInterval: 60000});
   var humanTransmit = "";
   var humanReceive = "";
   if (data) {
@@ -185,9 +185,9 @@ function MetricCard({title, value, belowText, difference}) {
   )
 }
 
-function SiteStats({site}) {
+function SiteStats({site, timeRange = '7d'}) {
 
-  const {data, error} = useSWR(`/api/sitemetrics?site=${site.slug}`, fetcher, {refreshInterval: 60000});
+  const {data, error} = useSWR(`/api/sitemetrics?site=${site.slug}&range=${timeRange}`, fetcher, {refreshInterval: 60000});
   if (data) {
     console.log("Site Stats");
     console.log(data);
@@ -197,6 +197,8 @@ function SiteStats({site}) {
     return acc + parseInt(node.gpus)
   }, 0);
 
+  const periodLabel = timeRange === '24h' ? 'previous day' : timeRange === '7d' ? 'previous week' : 'previous month';
+
   return (
     <Card className='mx-auto w-full p-0'>
       <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1'>
@@ -205,7 +207,7 @@ function SiteStats({site}) {
             <MetricCard
               title="GPU Hours"
               value={data ? data.gpuHours.toLocaleString(undefined, {maximumFractionDigits: 0}) : null}
-              belowText="From previous week"
+              belowText={`From ${periodLabel}`}
               difference={data ? ((data.gpuHours - data.prevGpuHours) / data.prevGpuHours) : null}/>
           )}
         </div>
@@ -213,7 +215,7 @@ function SiteStats({site}) {
           <MetricCard
             title="CPU Hours"
             value={data ? data.cpuHours.toLocaleString(undefined, {maximumFractionDigits: 0}) : null}
-            belowText="From previous week"
+            belowText={`From ${periodLabel}`}
             difference={data ? ((data.cpuHours - data.prevCpuHours) / data.prevCpuHours) : null}
           />
         </div>
@@ -237,9 +239,9 @@ function StatusBadge({icon, text, color}) {
 
 }
 
-function SiteGpuStats({site}) {
+function SiteGpuStats({site, timeRange = '7d'}) {
   // Fetch the GPU metrics
-  const {data, error} = useSWR(`/api/sitegpus?site=${site.slug}`, fetcher, {refreshInterval: 60000});
+  const {data, error} = useSWR(`/api/sitegpus?site=${site.slug}&range=${timeRange}`, fetcher, {refreshInterval: 60000});
 
   var cleaned_data = null;
   if (data) {
@@ -285,9 +287,6 @@ function SiteGpuStats({site}) {
 }
 
 function SiteGpuTypes({site}) {
-  // valueFormatter={dataFormatter}
-
-  const [selectedGpuType, setSelectedGpuType] = useState(null);
 
   var gpuTypes = useMemo(() => {
     var tmpGpuTypes = new Map();
@@ -302,45 +301,30 @@ function SiteGpuTypes({site}) {
         tmpGpuTypes.set(gpuType, parseInt(site.nodes[node].gpus));
       }
     }
-    // Convert to an array of objects
-    return Array.from(tmpGpuTypes, ([name, value]) => ({name: name, value: value}));
+    // Convert to an array of objects for horizontal BarChart
+    return Array.from(tmpGpuTypes, ([name, value]) => ({name: name, "Count": value}));
 
   }, [site]);
 
-  //console.log("GPU Types");
-  //console.log(gpuTypes);
-  // Calculate all of the unique names from gpuTypes
-  const gpuValueNames = gpuTypes.map((gpu) => gpu.value + " - " + gpu.name);
+  const dataFormatter = (number) =>
+    Intl.NumberFormat('us').format(number).toString();
 
   return (
-    <Card className='mx-auto w-full p-2 max-h-80'>
+    <Card className='mx-auto w-full p-2'>
       <h3 className="text-lg font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
         GPU Types
       </h3>
-      <div className='grid lg:grid-cols-8 grid-cols-1 gap-2'>
-        <DonutChart
-          className='lg:col-span-3'
-          data={gpuTypes}
-          index="name"
-          categories={["value"]}
-          onValueChange={(v) => {
-            //console.log(v);
-            if (!v) {
-              setSelectedGpuType(null);
-            } else {
-              selectedGpuType === v.name ? setSelectedGpuType(null) : setSelectedGpuType(v.name);
-            }
-          }}
-          active={selectedGpuType}
-        />
-        <Legend
-          className='lg:col-span-5'
-          categories={gpuValueNames}
-          activeLegend={selectedGpuType}
-          onClickLegendItem={(e) => {
-            selectedGpuType === e ? setSelectedGpuType(null) : setSelectedGpuType(e);
-          }}/>
-      </div>
+      <BarChart
+        className='mt-2'
+        data={gpuTypes}
+        index="name"
+        categories={["Count"]}
+        colors={['blue']}
+        layout="horizontal"
+        valueFormatter={dataFormatter}
+        yAxisWidth={120}
+        showLegend={false}
+      />
     </Card>
   )
 }
@@ -511,30 +495,6 @@ function SiteSelectBox({selectedSite, setSelectedSite}) {
 
 
 function DefaultInfoPanel({setSelectedSite, selectedSite, selectedSites=[], setSelectedSites, selectionLegendName='Selected Sites', setSelectionLegendName, regexPattern='', handleRegexChange, regexError}) {
-  const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
-
-  // Compute aggregates only when Nodes are available
-  let totalNodes = null;
-  let totalSites = null;
-  let totalGPUs = null;
-  let totalCPUs = null;
-  if (Nodes) {
-    totalNodes = Nodes.reduce((acc, site) => {
-      return acc + parseInt(site.nodes.length);
-    }, 0);
-    totalSites = Nodes.length;
-    totalGPUs = Nodes.reduce((acc, site) => {
-      return acc + site.nodes.reduce((nodeAcc, node) => {
-        return nodeAcc + (parseInt(node.gpus) || 0);
-      }, 0);
-    }, 0);
-    totalCPUs = Nodes.reduce((acc, site) => {
-      return acc + site.nodes.reduce((nodeAcc, node) => {
-        return nodeAcc + (parseInt(node.cpus) || 0);
-      }, 0);
-    }, 0);
-  }
-
   return (
     <div className="flex flex-col p-2">
       <div className=''>
@@ -622,43 +582,11 @@ function DefaultInfoPanel({setSelectedSite, selectedSite, selectedSites=[], setS
           Clear Selection ({selectedSites.length})
         </button>
       )}
-      <Card className='mx-auto w-full p-0 my-2'>
-        <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1'>
-          <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-r md:border-b-0 md:border-r lg:rounded-tl-lg">
-            <MetricCard
-              title="Sites"
-              value={totalSites != null ? totalSites.toLocaleString(undefined) : null}
-              belowText="Sites hosting NRP nodes"
-              />
-          </div>
-          <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-l md:border-b-0 md:border-l lg:rounded-tr-lg">
-            <MetricCard
-              title="Nodes"
-              value={totalNodes != null ? totalNodes.toLocaleString(undefined) : null}
-              belowText="Nodes registered in Kubernetes"
-            />
-          </div>
-          <div className="border-t border-gray-200 dark:border-gray-700 lg:border-t lg:border-r md:border-t-0 md:border-r lg:rounded-bl-lg">
-            <MetricCard
-              title="GPUs"
-              value={totalGPUs != null ? totalGPUs.toLocaleString(undefined) : null}
-              belowText="Total GPUs across all nodes"
-            />
-          </div>
-          <div className="border-t border-gray-200 dark:border-gray-700 lg:border-t lg:border-l md:border-t-0 md:border-l lg:rounded-br-lg">
-            <MetricCard
-              title="CPU Cores"
-              value={totalCPUs != null ? totalCPUs.toLocaleString(undefined) : null}
-              belowText="Total CPU cores across all nodes"
-            />
-          </div>
-        </div>
-      </Card>
     </div>
   )
 }
 
-export default function MapInfoPanel({site, setSelectedSite, selectedSites=[], setSelectedSites, selectionLegendName='Selected Sites', setSelectionLegendName, regexPattern='', handleRegexChange, regexError}) {
+export default function MapInfoPanel({site, setSelectedSite, selectedSites=[], setSelectedSites, selectionLegendName='Selected Sites', setSelectionLegendName, regexPattern='', handleRegexChange, regexError, timeRange='24h'}) {
   if (!site) {
     return (
       <>
@@ -687,10 +615,6 @@ export default function MapInfoPanel({site, setSelectedSite, selectedSites=[], s
     else
       return acc;
   }, 0);
-  // <StatusBadge icon={RiServerLine} text={`${site.nodes.length} Nodes Online`} color="text-green-500" />
-  // <StatusBadge icon={faMicrochip} text={`${totalGpus} GPUs`} color="text-sky-500" />
-  // max-h-[30em]
-  // lg:w-96 overflow-scroll lg:top-1 lg:right-1 lg:absolute relative
   console.log(site);
   return (
     <div className="p-2 md:p-0">
@@ -703,10 +627,10 @@ export default function MapInfoPanel({site, setSelectedSite, selectedSites=[], s
         {totalCaches > 0 && <Badge icon={RiDatabase2Line} color="violet">{totalCaches} OSDF Nodes</Badge>}
       </div>
       <div className="flex flex-col gap-2">
-        <SiteStats site={site}/>
-        {totalGpus > 0 ? <SiteGpuStats site={site}/> : null}
+        <SiteStats site={site} timeRange={timeRange}/>
+        {totalGpus > 0 ? <SiteGpuStats site={site} timeRange={timeRange}/> : null}
         {totalGpus > 0 ? <SiteGpuTypes site={site}/> : null}
-        <SiteNetworkStats site={site}/>
+        <SiteNetworkStats site={site} timeRange={timeRange}/>
       </div>
 
 

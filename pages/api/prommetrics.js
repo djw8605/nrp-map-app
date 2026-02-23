@@ -37,14 +37,22 @@ export default async function handler(req, res) {
 
   
   
+  const range = url.searchParams.get('range') || '24h';
+  const rangeMap = {
+    '24h': { ms: 24 * 60 * 60 * 1000, step: 60 * 60 },
+    '7d': { ms: 7 * 24 * 60 * 60 * 1000, step: 6 * 60 * 60 },
+    '30d': { ms: 30 * 24 * 60 * 60 * 1000, step: 24 * 60 * 60 },
+  };
+  const rangeConfig = rangeMap[range] || rangeMap['24h'];
+
   const now = new Date();
   // Round now to the nearest hour, rounding down
   now.setSeconds(0);
   now.setMilliseconds(0);
   now.setMinutes(0);
-  const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);  // 7 days ago
+  const start = new Date(now.getTime() - rangeConfig.ms);
   const end = now;
-  const step = 60 * 60; // 1 day
+  const step = rangeConfig.step;
 
   //prom.rangeQuery(pomQuery, start, end, step);
   var result = null;

@@ -93,9 +93,9 @@ function CustomChart({ item, data }) {
 }
 
 
-export function ClusterMetrics() {
+export function ClusterMetrics({ timeRange = '24h' }) {
 
-  const { data, error, mutate } = useSWR('/api/prommetrics?query=clustermetrics', fetcher, { refreshInterval: 3600000 });
+  const { data, error, mutate } = useSWR(`/api/prommetrics?query=clustermetrics&range=${timeRange}`, fetcher, { refreshInterval: 3600000 });
   if (data) {
     console.log("Got data from api");
     console.log(data);

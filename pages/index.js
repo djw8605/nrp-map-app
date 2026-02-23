@@ -2,11 +2,9 @@
 import Head from 'next/head'
 import Footer from '../components/footer'
 import NavBar from '../components/navbar'
-//import Map from '../components/map'
 import NodeMap from '../components/nodeMap'
-import SiteList from '../components/sitelist'
-import ProjectUsage from '../components/projectusage'
-import LiveMetrics from '../components/livemetrics'
+import GlobalControls from '../components/globalControls'
+import KpiRow from '../components/kpiRow'
 
 import dynamic from 'next/dynamic'
 import { GPUMetrics, CPUMetrics, NamespaceMetrics, ClusterMetrics } from '../components/gpumetrics'
@@ -26,9 +24,13 @@ export default function Home() {
   const [selectionLegendName, setSelectionLegendName] = useState('Selected Sites');
   const [regexPattern, setRegexPattern] = useState('');
   const [regexError, setRegexError] = useState('');
+  const [timeRange, setTimeRange] = useState('24h');
+  const [lastUpdated, setLastUpdated] = useState(null);
   
   // Fetch nodes for regex matching
-  const { data: Nodes } = useSWR('/api/nodes', fetcher);
+  const { data: Nodes } = useSWR('/api/nodes', fetcher, {
+    onSuccess: () => setLastUpdated(Date.now()),
+  });
 
   // Handle regex pattern change for selection
   const handleRegexChange = (pattern) => {
@@ -71,9 +73,18 @@ export default function Home() {
       </Head>
       <NavBar></NavBar>
 
+      <GlobalControls
+        timeRange={timeRange}
+        setTimeRange={setTimeRange}
+        lastUpdated={lastUpdated}
+      />
 
       <section>
-        <div className='container mx-auto grid grid-cols-1 md:grid-cols-3 md:gap-2 mt-1'>
+        <KpiRow />
+      </section>
+
+      <section>
+        <div className='container mx-auto grid grid-cols-1 md:grid-cols-3 md:gap-2 mt-2'>
           <div className='md:col-span-2 col-span-1 md:h-[40em] h-[20em] rounded shadow-lg bg-white dark:bg-gray-900 overflow-hidden'>
             <NodeMap 
               setSelectedSite={setSelectedSite} 
@@ -96,6 +107,7 @@ export default function Home() {
               regexPattern={regexPattern}
               handleRegexChange={handleRegexChange}
               regexError={regexError}
+              timeRange={timeRange}
             />
           </div>
         </div>
@@ -106,7 +118,7 @@ export default function Home() {
       
       <section>
         <div className='container mx-auto mt-8'>
-          <ClusterMetrics />
+          <ClusterMetrics timeRange={timeRange} />
 
         </div>
       </section>
@@ -116,46 +128,3 @@ export default function Home() {
     </>
   )
 }
-
-/*
-          <div className='grid md:grid-cols-3 grid-cols-1 gap-4'>
-            <GPUMetrics />
-            <CPUMetrics />
-            <NamespaceMetrics />
-          </div>
-          */
-
-/*
-      <section className='middle-section'>
-        <ProjectUsage />
-      </section>
-
-/*
-<section className='top-section my-4'>
-        <div className="container mx-auto">
-          <div className='grid md:grid-cols-12 grid-cols-1 md:gap-4'>
-            <div className='col-span-5 mb-4 md:mb-0'>
-              <h1 className='mb-4 font-bold text-4xl'>
-                National Research Platform
-              </h1>
-              <p className='mb-4'>
-                The National Research Platform is a partnership of more than 50 institutions, led by researchers at
-                UC San Diego, University of Nebraska-Lincoln, and UC Berkeley and includes the National Science Foundation, Department of Energy,
-                and multiple research universities in the US and around the world.
-              </p>
-
-              <div className='grid sm:grid-cols-2 grid-cols-1 gap-4 mt-10'>
-                <a className="rounded-md bg-green-600 p-3 text-xl text-center" href="https://docs.nationalresearchplatform.org/userdocs/start/get-access/">Get Access</a>
-                <a className="rounded-md bg-orange-600 p-3 text-xl text-center" href="https://docs.nationalresearchplatform.org/admindocs/participating/new-contributor-guide/">Add a server to the NRP</a>
-
-              </div>
-            </div>
-            <div className='col-span-7'>
-              <div className="lg:min-h-[30em] min-h-[20em] w-full h-full rounded-xl drop-shadow-md">
-
-              </div>
-            </div>
-          </div>
-        </div>
-      </section >
-      */
