@@ -197,7 +197,8 @@ function SiteStats({site, timeRange = '7d'}) {
     return acc + parseInt(node.gpus)
   }, 0);
 
-  const periodLabel = timeRange === '24h' ? 'previous day' : timeRange === '7d' ? 'previous week' : 'previous month';
+  const periodLabels = { '24h': 'previous day', '7d': 'previous week', '30d': 'previous month' };
+  const periodLabel = periodLabels[timeRange] || 'previous period';
 
   return (
     <Card className='mx-auto w-full p-0'>
