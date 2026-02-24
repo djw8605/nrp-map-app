@@ -8,13 +8,11 @@ import Map, {
 } from 'react-map-gl';
 import mapboxgl from 'mapbox-gl';
 import useSWR from 'swr';
+import { fetcher } from '../lib/fetcher';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {faLocationDot, faExpand, faDatabase} from "@fortawesome/free-solid-svg-icons";
 import MapInfoPanel from "./mapInfoPanel";
-
-const fetcher = (url) => fetch(url).then((res) => res.json());
-
 
 var siteIndex = 0;
 /*

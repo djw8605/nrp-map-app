@@ -17,8 +17,8 @@ import Select from 'react-select'
 import {useState, useEffect, useMemo} from 'react';
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
-
-const fetcher = (url) => fetch(url).then((res) => res.json());
+import { fetcher } from '../lib/fetcher';
+import { reportPrometheusError } from '../lib/prometheusToastStore';
 
 /**
  * Format bytes as human-readable text.
@@ -98,6 +98,12 @@ function NetworkCard({data, currentValue, title, icon, iconColor, graphColor}) {
 function SiteNetworkStats({site, timeRange = '24h'}) {
 
   const {data, error} = useSWR(`/api/sitenetwork?site=${site.slug}&range=${timeRange}`, fetcher, {refreshInterval: 60000});
+  const errorMessage = error?.message || null;
+  useEffect(() => {
+    if (errorMessage) {
+      reportPrometheusError(errorMessage);
+    }
+  }, [errorMessage]);
   var humanTransmit = "";
   var humanReceive = "";
   if (data) {
@@ -108,6 +114,19 @@ function SiteNetworkStats({site, timeRange = '24h'}) {
 
     let last_receive = data.receive[data.receive.length - 1];
     humanReceive = humanTransferSpeed(last_receive.value, true);
+  }
+
+  if (errorMessage) {
+    return (
+      <div className='mx-auto w-full grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1 gap-2'>
+        <Card className="w-full p-4 text-sm text-red-600 dark:text-red-400">
+          Failed to load network metrics: {errorMessage}
+        </Card>
+        <Card className="w-full p-4 text-sm text-red-600 dark:text-red-400">
+          Failed to load network metrics: {errorMessage}
+        </Card>
+      </div>
+    );
   }
 
 
@@ -188,6 +207,12 @@ function MetricCard({title, value, belowText, difference}) {
 function SiteStats({site, timeRange = '7d'}) {
 
   const {data, error} = useSWR(`/api/sitemetrics?site=${site.slug}&range=${timeRange}`, fetcher, {refreshInterval: 60000});
+  const errorMessage = error?.message || null;
+  useEffect(() => {
+    if (errorMessage) {
+      reportPrometheusError(errorMessage);
+    }
+  }, [errorMessage]);
   if (data) {
     console.log("Site Stats");
     console.log(data);
@@ -199,6 +224,14 @@ function SiteStats({site, timeRange = '7d'}) {
 
   const periodLabels = { '24h': 'previous day', '7d': 'previous week', '30d': 'previous month' };
   const periodLabel = periodLabels[timeRange] || 'previous period';
+
+  if (errorMessage) {
+    return (
+      <Card className='mx-auto w-full p-4 text-sm text-red-600 dark:text-red-400'>
+        Failed to load site metrics: {errorMessage}
+      </Card>
+    );
+  }
 
   return (
     <Card className='mx-auto w-full p-0'>
@@ -243,6 +276,12 @@ function StatusBadge({icon, text, color}) {
 function SiteGpuStats({site, timeRange = '7d'}) {
   // Fetch the GPU metrics
   const {data, error} = useSWR(`/api/sitegpus?site=${site.slug}&range=${timeRange}`, fetcher, {refreshInterval: 60000});
+  const errorMessage = error?.message || null;
+  useEffect(() => {
+    if (errorMessage) {
+      reportPrometheusError(errorMessage);
+    }
+  }, [errorMessage]);
 
   var cleaned_data = null;
   if (data) {
@@ -259,30 +298,36 @@ function SiteGpuStats({site, timeRange = '7d'}) {
   const dataFormatter = (number) =>
     Intl.NumberFormat('us').format(number).toString();
 
-  return (
-    <>
-      <Card
-        className='mx-auto w-full p-2 max-h-80'>
-        <h3 className="text-lg font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-          GPU Hours by Day
-        </h3>
-        {!data ? (
-          <LoadingElement/>
-        ) : (
-          <BarChart
-            className='max-h-40'
-            data={cleaned_data}
-            index="Date"
-            categories={["GPU Hours"]}
-            colors={['blue']}
-            formatter={dataFormatter}
-            yAxisWidth={48}
-            onValueChange={(v) => console.log(v)}
-          />
-        )}
-
+  if (errorMessage) {
+    return (
+      <Card className='mx-auto w-full p-4 text-sm text-red-600 dark:text-red-400'>
+        Failed to load GPU metrics: {errorMessage}
       </Card>
-    </>
+    );
+  }
+
+  return (
+    <Card
+      className='mx-auto w-full p-2 max-h-80'>
+      <h3 className="text-lg font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+        GPU Hours by Day
+      </h3>
+      {!data ? (
+        <LoadingElement/>
+      ) : (
+        <BarChart
+          className='max-h-40'
+          data={cleaned_data}
+          index="Date"
+          categories={["GPU Hours"]}
+          colors={['blue']}
+          formatter={dataFormatter}
+          yAxisWidth={48}
+          onValueChange={(v) => console.log(v)}
+        />
+      )}
+
+    </Card>
   )
 
 }

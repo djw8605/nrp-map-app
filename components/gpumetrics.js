@@ -3,9 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AreaChart, Card } from '@tremor/react';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import { fetcher } from '../lib/fetcher';
+import { reportPrometheusError } from '../lib/prometheusToastStore';
 
-
-const fetcher = (url) => fetch(url).then((res) => res.json());
 
 const numberFormatter = (number) => {
   return Intl.NumberFormat('us').format(number).toString();
@@ -92,10 +92,29 @@ function CustomChart({ item, data }) {
   );
 }
 
+function ErrorCard({ title, message }) {
+  return (
+    <Card>
+      <dt className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
+        {title}
+      </dt>
+      <dd className="mt-2 text-sm text-red-600 dark:text-red-400">
+        {message}
+      </dd>
+    </Card>
+  );
+}
+
 
 export function ClusterMetrics({ timeRange = '24h' }) {
 
   const { data, error, mutate } = useSWR(`/api/prommetrics?query=clustermetrics&range=${timeRange}`, fetcher, { refreshInterval: 3600000 });
+  const errorMessage = error?.message || null;
+  useEffect(() => {
+    if (errorMessage) {
+      reportPrometheusError(errorMessage);
+    }
+  }, [errorMessage]);
   if (data) {
     console.log("Got data from api");
     console.log(data);
@@ -109,7 +128,11 @@ export function ClusterMetrics({ timeRange = '24h' }) {
     <>
       <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {categories.map((item) => (
-          <CustomChart item={item} key={item.name} data={data ? data.values : null} />
+          errorMessage ? (
+            <ErrorCard key={item.name} title={item.name} message={errorMessage} />
+          ) : (
+            <CustomChart item={item} key={item.name} data={data ? data.values : null} />
+          )
         ))}
       </dl>
     </>

@@ -4,8 +4,7 @@ import { RiServerLine, RiCpuLine, RiMapPinLine, RiDashboard3Line } from '@remixi
 import useSWR from 'swr';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-
-const fetcher = (url) => fetch(url).then((res) => res.json());
+import { fetcher } from '../lib/fetcher';
 
 function KpiCard({ title, value, icon: Icon, iconColor, description }) {
   return (

@@ -8,6 +8,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 //import { Provider } from 'react-redux'
 
 import '../styles/globals.css'
+import PrometheusErrorToastHost from '../components/prometheusErrorToastHost'
 
 
 function MyApp({ Component, pageProps }) {
@@ -17,7 +18,10 @@ function MyApp({ Component, pageProps }) {
     </Provider>
     */
   return (
-    <Component {...pageProps} />
+    <>
+      <PrometheusErrorToastHost />
+      <Component {...pageProps} />
+    </>
   );
 }
 
