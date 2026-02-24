@@ -2,7 +2,7 @@ import { PrometheusDriver } from 'prometheus-query';
 import { getNodesDataFromR2 } from "../../lib/nodesUtils";
 
 const prom = new PrometheusDriver({
-  endpoint: "https://prometheus.nrp-nautilus.io/",
+  endpoint: "https://thanos.nrp-nautilus.io/",
   baseURL: "/api/v1", // default value
   timeout: 60000
 });
@@ -12,9 +12,16 @@ export default async function handler(req, res) {
 
   // Get the site from the request
   const site = req.query.site;
+  const range = req.query.range || '24h';
   if (!site) {
     return res.status(400).send('Missing site parameter');
   }
+  const rangeMap = {
+    '24h': { ms: 24 * 60 * 60 * 1000, step: 1800 },
+    '7d': { ms: 7 * 24 * 60 * 60 * 1000, step: 3600 * 3 },
+    '30d': { ms: 30 * 24 * 60 * 60 * 1000, step: 3600 * 12 },
+  };
+  const rangeConfig = rangeMap[range] || rangeMap['24h'];
 
   try {
     // Fetch nodes data from R2
@@ -39,17 +46,14 @@ export default async function handler(req, res) {
     var transmitQuery = `sum(rate(node_network_transmit_bytes_total{instance=~"${nodeRegex}", device=~"en.*|et.*"}[5m]))`
     var receiveQuery = `sum(rate(node_network_receive_bytes_total{instance=~"${nodeRegex}", device=~"en.*|et.*"}[5m]))`
 
-    //console.log(transmitQuery);
-    //console.log(receiveQuery);
-    // Start date is now - 24 hours
+    // Start date is now - configured range
     let startDate = new Date();
-    // Subtract 1 day
-    startDate.setDate(startDate.getDate() - 1);
+    startDate.setTime(startDate.getTime() - rangeConfig.ms);
     // End date is now
     let endDate = new Date();
     var results = await Promise.all([
-      prom.rangeQuery(transmitQuery, startDate, endDate, 1800),
-      prom.rangeQuery(receiveQuery, startDate, endDate, 1800)
+      prom.rangeQuery(transmitQuery, startDate, endDate, rangeConfig.step),
+      prom.rangeQuery(receiveQuery, startDate, endDate, rangeConfig.step)
     ]);
 
     /*

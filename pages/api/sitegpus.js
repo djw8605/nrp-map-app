@@ -2,7 +2,7 @@ import { PrometheusDriver } from 'prometheus-query';
 import { getNodesDataFromR2 } from "../../lib/nodesUtils";
 
 const prom = new PrometheusDriver({
-  endpoint: "https://prometheus.nrp-nautilus.io/",
+  endpoint: "https://thanos.nrp-nautilus.io/",
   baseURL: "/api/v1", // default value
   timeout: 60000
 });
@@ -12,9 +12,16 @@ export default async function handler(req, res) {
 
   // Get the site from the request
   const site = req.query.site;
+  const range = req.query.range || '7d';
   if (!site) {
     return res.status(400).send('Missing site parameter');
   }
+  const rangeMap = {
+    '24h': { label: '1d', ms: 24 * 60 * 60 * 1000, step: 3600 },
+    '7d': { label: '7d', ms: 7 * 24 * 60 * 60 * 1000, step: 24 * 3600 },
+    '30d': { label: '30d', ms: 30 * 24 * 60 * 60 * 1000, step: 24 * 3600 },
+  };
+  const rangeConfig = rangeMap[range] || rangeMap['7d'];
 
   try {
     // Fetch nodes data from R2
@@ -36,16 +43,15 @@ export default async function handler(req, res) {
     // Combine all node names into a regex
     var nodeRegex = nodes.reduce((acc, val) => acc + "|" + val.name, "").substring(1);
 
-    const query = `sum(sum_over_time(namespace_allocated_resources{node=~'${nodeRegex}', resource=~'nvidia_com.*'}[1d:1h]))`;
-    var results = await prom.instantQuery(query);
+    // Use increase to get GPU hours consumed per day, not cumulative
+    const query = `sum(increase(namespace_allocated_resources{node=~'${nodeRegex}', resource=~'nvidia_com.*'}[1d]))`;
 
     // Get the current date
     var end = new Date();
-    // Get now minus 7 days
-    var start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+    // Get now minus configured range
+    var start = new Date(end.getTime() - rangeConfig.ms);
 
-
-    var results = await prom.rangeQuery(query, start, end, 24*3600);
+    var results = await prom.rangeQuery(query, start, end, rangeConfig.step);
     let gpuRegex = /nvidia_com.*/;
     console.log("Site GPUs:");
     //console.log(results);

@@ -12,9 +12,16 @@ export default async function handler(req, res) {
 
   // Get the site from the request
   const site = req.query.site;
+  const range = req.query.range || '7d';
   if (!site) {
     return res.status(400).send('Missing site parameter');
   }
+  const rangeMap = {
+    '24h': { label: '1d', ms: 24 * 60 * 60 * 1000 },
+    '7d': { label: '7d', ms: 7 * 24 * 60 * 60 * 1000 },
+    '30d': { label: '30d', ms: 30 * 24 * 60 * 60 * 1000 },
+  };
+  const rangeConfig = rangeMap[range] || rangeMap['7d'];
 
   try {
     // Fetch nodes data from R2
@@ -36,10 +43,10 @@ export default async function handler(req, res) {
     // Combine all node names into a regex
     var nodeRegex = nodes.reduce((acc, val) => acc + "|" + val.name, "").substring(1);
     
-    const query = `sum by (resource) (sum_over_time(namespace_allocated_resources{node=~'${nodeRegex}', resource=~'nvidia_com.*|cpu'}[7d:1h]))`;
+    const query = `sum by (resource) (sum_over_time(namespace_allocated_resources{node=~'${nodeRegex}', resource=~'nvidia_com.*|cpu'}[${rangeConfig.label}:1h]))`;
     var multiResults = await Promise.all([
       prom.instantQuery(query),
-      prom.instantQuery(query, new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000))
+      prom.instantQuery(query, new Date(new Date().getTime() - rangeConfig.ms))
     ])
     
     var results = multiResults[0];

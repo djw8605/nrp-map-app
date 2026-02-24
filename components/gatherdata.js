@@ -1,8 +1,6 @@
 import useSWR from 'swr'
 import { update } from '../redux/updateTime'
-
-
-const fetcher = (url) => fetch(url).then((res) => res.json());
+import { fetcher } from '../lib/fetcher';
 
 export function GetProjects() {
     const { data, error } = useSWR('/api/projects', fetcher, { refreshInterval: 3600000 });
