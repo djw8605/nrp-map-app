@@ -2,7 +2,7 @@ import { PrometheusDriver } from 'prometheus-query';
 import { getNodesDataFromR2 } from "../../lib/nodesUtils";
 
 const prom = new PrometheusDriver({
-  endpoint: "https://prometheus.nrp-nautilus.io/",
+  endpoint: "https://thanos.nrp-nautilus.io/",
   baseURL: "/api/v1", // default value
   timeout: 60000
 });

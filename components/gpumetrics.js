@@ -1,10 +1,11 @@
 import useSWR from 'swr'
 import React, { useState, useEffect, useRef } from 'react';
-import { AreaChart, Card } from '@tremor/react';
+import { AreaChart, Card, BadgeDelta } from '@tremor/react';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { fetcher } from '../lib/fetcher';
 import { reportPrometheusError } from '../lib/prometheusToastStore';
+import { formatCompactNumber } from '../lib/formatUtils';
 
 
 const numberFormatter = (number) => {
@@ -50,52 +51,77 @@ const customTooltipHandler = (props, setselectedChartData) => {
 function CustomChart({ item, data }) {
   if (data == null || data.length == 0) {
     return (
-      <Card>
+      <Card className="rounded-xl shadow-sm p-5 flex flex-col justify-between min-h-[210px]">
         <Skeleton height={150} />
       </Card>
     );
   }
   const [selectedChartData, setselectedChartData] = useState(null);
   const payload = selectedChartData?.payload[0];
-  const formattedValue = payload
-    ? item.valueFormatter(payload?.payload[item.chartCategory])
-    : item.valueFormatter(data[data.length-1][item.chartCategory]);
+  const currentRaw = payload
+    ? payload?.payload[item.chartCategory]
+    : data[data.length - 1][item.chartCategory];
+  const formattedValue = item.valueFormatter(currentRaw);
+
+  // Calculate percent change from first to last value
+  const firstVal = data[0]?.[item.chartCategory];
+  const lastVal = data[data.length - 1]?.[item.chartCategory];
+  let pctChange = null;
+  let deltaType = 'unchanged';
+  if (firstVal != null && lastVal != null && firstVal !== 0) {
+    pctChange = (lastVal - firstVal) / firstVal;
+    if (pctChange > 0.15) deltaType = 'increase';
+    else if (pctChange > 0.02) deltaType = 'moderateIncrease';
+    else if (pctChange > -0.02) deltaType = 'unchanged';
+    else if (pctChange > -0.15) deltaType = 'moderateDecrease';
+    else deltaType = 'decrease';
+  }
+
   return (
-    <Card>
-      <dt className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
-        {item.name}
-      </dt>
-      <dd className="mt-1 flex items-baseline justify-between">
-        <span className="text-tremor-title font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-          {formattedValue}
+    <Card className="rounded-xl shadow-sm p-5 flex flex-col justify-between min-h-[210px]">
+      <div>
+        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          {item.name}
+        </dt>
+        <dd className="mt-1.5 flex items-baseline gap-2">
+          <span className="text-2xl font-bold text-tremor-content-strong dark:text-dark-tremor-content-strong lg:text-3xl leading-tight">
+            {formattedValue}
+          </span>
+          {pctChange != null && (
+            <BadgeDelta size="xs" deltaType={deltaType}>
+              {(Math.abs(pctChange) * 100).toFixed(0)}%
+            </BadgeDelta>
+          )}
+        </dd>
+      </div>
+      <div>
+        <span className="text-xs text-gray-400 dark:text-gray-500">
+          {payload ? payload?.payload?.humanDate : data[data.length - 1].humanDate}
         </span>
-        <span className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
-          {payload ? `${payload?.payload?.humanDate}` : `${data[data.length-1].humanDate}`}
-        </span>
-      </dd>
-      <AreaChart
-        data={data}
-        index="humanDate"
-        categories={[item.chartCategory]}
-        colors={[item.color]}
-        showLegend={false}
-        showYAxis={false}
-        showGridLines={false}
-        showGradient={false}
-        startEndOnly={true}
-        className="-mb-2 mt-3 h-24"
-        customTooltip={(props) => {
-          customTooltipHandler(props, setselectedChartData);
-        }}
-      />
+        <AreaChart
+          data={data}
+          index="humanDate"
+          categories={[item.chartCategory]}
+          colors={[item.color]}
+          showLegend={false}
+          showYAxis={false}
+          showGridLines={false}
+          showGradient={true}
+          startEndOnly={true}
+          className="-mb-2 mt-2 h-24"
+          customTooltip={(props) => {
+            customTooltipHandler(props, setselectedChartData);
+          }}
+        />
+      </div>
     </Card>
   );
 }
 
 function ErrorCard({ title, message }) {
   return (
-    <Card>
-      <dt className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
+    <Card className="rounded-xl shadow-sm p-5 min-h-[210px]">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         {title}
       </dt>
       <dd className="mt-2 text-sm text-red-600 dark:text-red-400">
@@ -106,9 +132,16 @@ function ErrorCard({ title, message }) {
 }
 
 
-export function ClusterMetrics({ timeRange = '24h' }) {
+export function ClusterMetrics({ timeRange = '24h', onLastUpdated }) {
 
-  const { data, error, mutate } = useSWR(`/api/prommetrics?query=clustermetrics&range=${timeRange}`, fetcher, { refreshInterval: 3600000 });
+  const { data, error, mutate } = useSWR(`/api/prommetrics?query=clustermetrics&range=${timeRange}`, fetcher, {
+    refreshInterval: 3600000,
+    onSuccess: () => {
+      if (onLastUpdated) {
+        onLastUpdated(Date.now());
+      }
+    },
+  });
   const errorMessage = error?.message || null;
   useEffect(() => {
     if (errorMessage) {
@@ -126,7 +159,7 @@ export function ClusterMetrics({ timeRange = '24h' }) {
   
   return (
     <>
-      <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {categories.map((item) => (
           errorMessage ? (
             <ErrorCard key={item.name} title={item.name} message={errorMessage} />

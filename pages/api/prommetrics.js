@@ -2,7 +2,7 @@ import { PrometheusDriver } from 'prometheus-query';
 import jayson from 'jayson';
 
 const prom = new PrometheusDriver({
-  endpoint: "https://prometheus.nrp-nautilus.io/",
+  endpoint: "https://thanos.nrp-nautilus.io/",
   baseURL: "/api/v1", // default value
   timeout: 60000
 });
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       or
       label_replace(count(count by (namespace) (DCGM_FI_DEV_GPU_TEMP{namespace!="gpu-mon"})), "type", "gpu_namespaces", "", "")
       or
-      label_replace(count (DCGM_FI_DEV_GPU_TEMP{namespace!="gpu-mon"} * on (namespace, pod) group_left(node) max by (namespace, pod, node) (node_namespace_pod:kube_pod_info:)), "type", "gpus", "", "")
+      label_replace(count (DCGM_FI_DEV_GPU_TEMP{namespace!="gpu-mon"} * on (namespace, pod) group_left(node) max by (namespace, pod) (node_namespace_pod:kube_pod_info:)), "type", "gpus", "", "")
     `
   }
 

@@ -27,9 +27,7 @@ export default function Home() {
   const [lastUpdated, setLastUpdated] = useState(null);
   
   // Fetch nodes for regex matching
-  const { data: Nodes } = useSWR('/api/nodes', fetcher, {
-    onSuccess: () => setLastUpdated(Date.now()),
-  });
+  const { data: Nodes } = useSWR('/api/nodes', fetcher);
 
   // Handle regex pattern change for selection
   const handleRegexChange = (pattern) => {
@@ -78,13 +76,13 @@ export default function Home() {
         lastUpdated={lastUpdated}
       />
 
-      <section>
+      <section className="mt-3">
         <KpiRow />
       </section>
 
-      <section>
-        <div className='container mx-auto grid grid-cols-1 md:grid-cols-3 md:gap-2 mt-2'>
-          <div className='md:col-span-2 col-span-1 md:h-[40em] h-[20em] rounded shadow-lg bg-white dark:bg-gray-900 overflow-hidden'>
+      <section className="mt-4">
+        <div className='container mx-auto px-2 sm:px-0 grid grid-cols-1 lg:grid-cols-3 gap-4'>
+          <div className='lg:col-span-2 col-span-1 md:h-[34em] h-[18em] rounded-xl shadow-sm bg-white dark:bg-gray-900 overflow-hidden relative'>
             <NodeMap 
               setSelectedSite={setSelectedSite} 
               selectedSite={selectedSite}
@@ -95,7 +93,7 @@ export default function Home() {
               handleRegexChange={handleRegexChange}
             />
           </div>
-          <div className='md:col-span-1 col-span-1 bg-white dark:bg-gray-900'>
+          <div className='lg:col-span-1 col-span-1 bg-white dark:bg-gray-900'>
             <MapInfoPanel 
               site={selectedSite} 
               setSelectedSite={setSelectedSite}
@@ -110,18 +108,13 @@ export default function Home() {
             />
           </div>
         </div>
-
       </section>
 
-      
-      
-      <section>
-        <div className='container mx-auto mt-8'>
-          <ClusterMetrics timeRange={timeRange} />
-
+      <section className="mt-4 mb-6">
+        <div className='container mx-auto px-2 sm:px-0'>
+          <ClusterMetrics timeRange={timeRange} onLastUpdated={setLastUpdated} />
         </div>
       </section>
-
 
       <Footer></Footer>
     </>

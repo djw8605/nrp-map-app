@@ -10,8 +10,9 @@ import mapboxgl from 'mapbox-gl';
 import useSWR from 'swr';
 import { fetcher } from '../lib/fetcher';
 
+import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {faLocationDot, faExpand, faDatabase} from "@fortawesome/free-solid-svg-icons";
+import {faLocationDot, faExpand, faDatabase, faUpRightAndDownLeftFromCenter} from "@fortawesome/free-solid-svg-icons";
 import MapInfoPanel from "./mapInfoPanel";
 
 var siteIndex = 0;
@@ -109,18 +110,18 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false,
         pinColor = "text-green-500"; // OSDF green
       }
       
-      // Check selection state - multi-selected sites are red
+      // Check selection state - selected and multi-selected sites are red
       const isSelected = node === selectedSite;
       const isMultiSelected = isSiteSelected(node);
       
-      if (isMultiSelected) {
-        pinColor = "text-red-500"; // Red for multi-selected sites
+      if (isSelected || isMultiSelected) {
+        pinColor = "text-red-500"; // Red for selected sites
       }
       
       // Selection styling
       let selectionClass = "";
       let finalSize = computedSize;
-      if (isMultiSelected) {
+      if (isSelected || isMultiSelected) {
         selectionClass = "drop-shadow-lg";
         finalSize = computedSelectedSize;
       }
@@ -244,6 +245,13 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false,
 
         </Map>
         <Legend />
+        <Link
+          href="/map"
+          title="Open full-screen map"
+          className="absolute top-3 right-3 z-10 bg-white dark:bg-gray-800 shadow rounded-md p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
+        >
+          <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} className="h-4 w-4 text-gray-700 dark:text-gray-200" />
+        </Link>
       </div>
     </>
   )

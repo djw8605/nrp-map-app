@@ -11,7 +11,7 @@ import {
   faChartColumn, faCircleArrowUp, faCircleArrowDown
 } from "@fortawesome/free-solid-svg-icons";
 import useSWR from 'swr'
-import {Badge, BarChart, Card, SparkAreaChart, BadgeDelta} from '@tremor/react';
+import {Badge, BarChart, Card, SparkAreaChart, BadgeDelta, Flex, Table, TableHead, TableRow, TableHeaderCell, TableBody, TableCell} from '@tremor/react';
 import {RiCpuLine, RiServerLine, RiDatabase2Line} from '@remixicon/react';
 import Select from 'react-select'
 import {useState, useEffect, useMemo} from 'react';
@@ -19,6 +19,8 @@ import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import { fetcher } from '../lib/fetcher';
 import { reportPrometheusError } from '../lib/prometheusToastStore';
+import { formatCompactNumber, formatThroughput } from '../lib/formatUtils';
+import SectionHeader from './SectionHeader';
 
 /**
  * Format bytes as human-readable text.
@@ -65,18 +67,16 @@ function LoadingElement() {
 
 function NetworkCard({data, currentValue, title, icon, iconColor, graphColor}) {
   return (
-    <Card className="w-full flex flex-col justify-between p-0">
-      <div className="flex flex-row justify-between px-2 pt-2">
+    <Card className="w-full flex flex-col justify-between rounded-xl shadow-sm p-0">
+      <div className="flex flex-row justify-between items-center px-4 pt-4">
         <div className="flex flex-col items-start">
-          <p
-            className="text-tremor-default font-medium text-tremor-content dark:text-dark-tremor-content mb-1">{title}</p>
-          <p
-            className="text-tremor-metric font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{title}</p>
+          <p className="text-xl font-bold text-tremor-content-strong dark:text-dark-tremor-content-strong">
             {data ? currentValue : "Loading..."}
           </p>
         </div>
         <div>
-          <FontAwesomeIcon icon={icon} size="2x" className={`${iconColor} text-xl`}/>
+          <FontAwesomeIcon icon={icon} size="lg" className={`${iconColor}`}/>
         </div>
       </div>
       {!data ? (
@@ -87,12 +87,11 @@ function NetworkCard({data, currentValue, title, icon, iconColor, graphColor}) {
           categories={['value']}
           index={'time'}
           colors={[graphColor]}
-          className="w-full"
+          className="w-full mt-2"
         />
       )}
     </Card>
   )
-
 }
 
 function SiteNetworkStats({site, timeRange = '24h'}) {
@@ -171,36 +170,33 @@ function MetricCard({title, value, belowText, difference}) {
   }
 
   return (
-    <>
-      <div className='mx-auto w-full p-2'>
-        <p className="text-tremor-default font-medium text-tremor-content dark:text-dark-tremor-content ">
-          {title}
-        </p>
-        {value == null ? (
-          <div className='p-2'>
-            <Skeleton height={28} width={160} />
-            <div className='mt-2'>
-              <Skeleton height={12} width={110} />
-            </div>
+    <div className='w-full p-4'>
+      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        {title}
+      </p>
+      {value == null ? (
+        <div className='mt-2'>
+          <Skeleton height={32} width={160} />
+          <div className='mt-2'>
+            <Skeleton height={12} width={110} />
           </div>
-        ) : (
-          <>
-            <p className="text-tremor-metric font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-              {value}
-            </p>
-
-            <div className="text-tremor-label text-tremor-content dark:text-dark-tremor-content flex flex-row items-center">
-              {difference && (
-                <BadgeDelta className='mr-1' size="xs" deltaType={deltaType} isIncreasePositive={true}>
-                  {(difference * 100).toLocaleString(undefined, {maximumFractionDigits: 0})}%
-                </BadgeDelta>
-              )}
-              {belowText}
-            </div>
-          </>
-        )}
-      </div>
-    </>
+        </div>
+      ) : (
+        <>
+          <p className="mt-1 text-2xl font-bold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {value}
+          </p>
+          <div className="mt-1 flex items-center gap-1.5">
+            {difference && (
+              <BadgeDelta size="xs" deltaType={deltaType} isIncreasePositive={true}>
+                {(difference * 100).toLocaleString(undefined, {maximumFractionDigits: 0})}%
+              </BadgeDelta>
+            )}
+            <span className="text-xs text-gray-400 dark:text-gray-500">{belowText}</span>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -213,46 +209,41 @@ function SiteStats({site, timeRange = '7d'}) {
       reportPrometheusError(errorMessage);
     }
   }, [errorMessage]);
-  if (data) {
-    console.log("Site Stats");
-    console.log(data);
-  }
 
   let totalGpus = site.nodes.reduce((acc, node) => {
     return acc + parseInt(node.gpus)
   }, 0);
 
-  const periodLabels = { '24h': 'previous day', '7d': 'previous week', '30d': 'previous month' };
-  const periodLabel = periodLabels[timeRange] || 'previous period';
+  const periodLabels = { '24h': 'vs previous 24h', '7d': 'vs previous 7d', '30d': 'vs previous 30d' };
+  const periodLabel = periodLabels[timeRange] || 'vs previous period';
 
   if (errorMessage) {
     return (
-      <Card className='mx-auto w-full p-4 text-sm text-red-600 dark:text-red-400'>
+      <Card className='w-full rounded-xl shadow-sm p-4 text-sm text-red-600 dark:text-red-400'>
         Failed to load site metrics: {errorMessage}
       </Card>
     );
   }
 
   return (
-    <Card className='mx-auto w-full p-0'>
-      <div className='grid lg:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 grid-cols-1'>
-        <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-r md:border-b-0 md:border-r lg:rounded-tl-lg">
-          {totalGpus > 0 && (
-            <MetricCard
-              title="GPU Hours"
-              value={data ? data.gpuHours.toLocaleString(undefined, {maximumFractionDigits: 0}) : null}
-              belowText={`From ${periodLabel}`}
-              difference={data ? ((data.gpuHours - data.prevGpuHours) / data.prevGpuHours) : null}/>
-          )}
-        </div>
-        <div className="border-b border-gray-200 dark:border-gray-700 lg:border-b lg:border-l md:border-b-0 md:border-l lg:rounded-tr-lg">
+    <Card className='w-full rounded-xl shadow-sm p-0 overflow-hidden'>
+      <div className='px-4 pt-4 pb-2'>
+        <h3 className='text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400'>Compute Usage</h3>
+      </div>
+      <div className='grid grid-cols-2 divide-x divide-gray-200 dark:divide-gray-700'>
+        {totalGpus > 0 && (
           <MetricCard
-            title="CPU Hours"
-            value={data ? data.cpuHours.toLocaleString(undefined, {maximumFractionDigits: 0}) : null}
-            belowText={`From ${periodLabel}`}
-            difference={data ? ((data.cpuHours - data.prevCpuHours) / data.prevCpuHours) : null}
-          />
-        </div>
+            title="GPU Hours"
+            value={data ? formatCompactNumber(data.gpuHours, 0) : null}
+            belowText={periodLabel}
+            difference={data ? ((data.gpuHours - data.prevGpuHours) / data.prevGpuHours) : null}/>
+        )}
+        <MetricCard
+          title="CPU Hours"
+          value={data ? formatCompactNumber(data.cpuHours, 0) : null}
+          belowText={periodLabel}
+          difference={data ? ((data.cpuHours - data.prevCpuHours) / data.prevCpuHours) : null}
+        />
       </div>
     </Card>
   )
@@ -300,17 +291,24 @@ function SiteGpuStats({site, timeRange = '7d'}) {
 
   if (errorMessage) {
     return (
-      <Card className='mx-auto w-full p-4 text-sm text-red-600 dark:text-red-400'>
+      <Card className='w-full rounded-xl shadow-sm p-4 text-sm text-red-600 dark:text-red-400'>
         Failed to load GPU metrics: {errorMessage}
       </Card>
     );
   }
 
+  const titleMap = {
+    '24h': 'GPU Hours (Hourly)',
+    '7d': 'GPU Hours per Day',
+    '30d': 'GPU Hours per Day',
+  };
+  const title = titleMap[timeRange] || 'GPU Hours per Day';
+
   return (
     <Card
-      className='mx-auto w-full p-2 max-h-80'>
-      <h3 className="text-lg font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-        GPU Hours by Day
+      className='w-full rounded-xl shadow-sm p-4 max-h-80'>
+      <h3 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+        {title}
       </h3>
       {!data ? (
         <LoadingElement/>
@@ -347,30 +345,31 @@ function SiteGpuTypes({site}) {
         tmpGpuTypes.set(gpuType, parseInt(site.nodes[node].gpus));
       }
     }
-    // Convert to an array of objects for horizontal BarChart
-    return Array.from(tmpGpuTypes, ([name, value]) => ({name: name, "Count": value}));
-
+    return Array.from(tmpGpuTypes, ([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
   }, [site]);
 
-  const dataFormatter = (number) =>
-    Intl.NumberFormat('us').format(number).toString();
-
   return (
-    <Card className='mx-auto w-full p-2'>
-      <h3 className="text-lg font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+    <Card className='w-full rounded-xl shadow-sm p-4'>
+      <h3 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong mb-1.5">
         GPU Types
       </h3>
-      <BarChart
-        className='mt-2'
-        data={gpuTypes}
-        index="name"
-        categories={["Count"]}
-        colors={['blue']}
-        layout="horizontal"
-        valueFormatter={dataFormatter}
-        yAxisWidth={120}
-        showLegend={false}
-      />
+      <Table>
+        <TableHead className="bg-transparent">
+          <TableRow className="border-b border-gray-200 dark:border-gray-700">
+            <TableHeaderCell className="bg-transparent py-1">Type</TableHeaderCell>
+            <TableHeaderCell className="text-right bg-transparent py-1">Count</TableHeaderCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {gpuTypes.map((gpu) => (
+            <TableRow key={gpu.name}>
+              <TableCell className="py-1.5">{gpu.name}</TableCell>
+              <TableCell className="text-right font-semibold py-1.5">{gpu.count.toLocaleString()}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </Card>
   )
 }
@@ -542,33 +541,34 @@ function SiteSelectBox({selectedSite, setSelectedSite}) {
 
 function DefaultInfoPanel({setSelectedSite, selectedSite, selectedSites=[], setSelectedSites, selectionLegendName='Selected Sites', setSelectionLegendName, regexPattern='', handleRegexChange, regexError}) {
   return (
-    <div className="flex flex-col p-2">
-      <div className=''>
-        <a href="https://nationalresearchplatform.org" target="_blank" rel="noopener noreferrer">
-          <img src="/images/NRP_LOGO-cropped.png" alt="NRP Logo" className='object-scale-down block dark:hidden'/>
-          <img src="/images/NRP_LOGO-cropped-dark.png" alt="NRP Logo" className='object-scale-down hidden dark:block'/>
-
+    <div className="flex flex-col p-2 space-y-4">
+      {/* About NRP Section */}
+      <div>
+        <SectionHeader title="About NRP" className="mb-3" />
+        <a href="https://nationalresearchplatform.org" target="_blank" rel="noopener noreferrer" className="block">
+          <img src="/images/NRP_LOGO-cropped.png" alt="NRP Logo" className='object-scale-down h-12 block dark:hidden'/>
+          <img src="/images/NRP_LOGO-cropped-dark.png" alt="NRP Logo" className='object-scale-down h-12 hidden dark:block'/>
         </a>
-      </div>
-      <div className='mt-1'>
-        <p>
+        <p className='mt-2 text-sm text-gray-600 dark:text-gray-300 leading-relaxed'>
           The National Research Platform is a partnership of more than 50 institutions,
           led by researchers at UC San Diego, University of Nebraska-Lincoln, and Massachusetts
           Green High Performance Computing Center and includes contributions by the National
           Science Foundation, the Department of Energy, the Department of Defense, and many
-          research universities and R&E networking organizations in the US and around the world.
+          research universities and R&amp;E networking organizations in the US and around the world.
         </p>
       </div>
-      <div className='my-2'>
-        <label htmlFor="siteSelect"
-               className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">Select a site
-          or click on a site in the map</label>
+
+      {/* Select Site Section */}
+      <div>
+        <SectionHeader title="Select Site" className="mb-2" />
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1.5">Choose a site or click on the map</p>
         <SiteSelectBox id="siteSelect" selectedSite={selectedSite} setSelectedSite={setSelectedSite}/>
       </div>
       
-      <div className='my-2'>
-        <label htmlFor="multiSiteSelect"
-               className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">Map Customization - Select Multiple Sites</label>
+      {/* Map Customization Section */}
+      <div>
+        <SectionHeader title="Map Customization" className="mb-2" />
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1.5">Select multiple sites to highlight</p>
         <SiteMultiSelectBox 
           id="multiSiteSelect" 
           selectedSites={selectedSites} 
@@ -576,18 +576,19 @@ function DefaultInfoPanel({setSelectedSite, selectedSite, selectedSites=[], setS
         />
       </div>
       
-      <div className='my-2'>
+      <div>
         <label htmlFor="regexSelect"
-               className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">Or select by Regex pattern</label>
+               className="text-sm text-gray-500 dark:text-gray-400 block mb-1.5">Or filter by regex pattern</label>
         <input
           id="regexSelect"
           type="text"
           value={regexPattern}
           onChange={(e) => handleRegexChange && handleRegexChange(e.target.value)}
           placeholder="e.g., chicago|boulder|^ucsd.*"
-          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md 
+          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg
                    bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100
-                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                   transition-colors"
         />
         {regexError && (
           <span className="text-xs text-red-500 dark:text-red-400 block mt-1">
@@ -602,17 +603,18 @@ function DefaultInfoPanel({setSelectedSite, selectedSite, selectedSites=[], setS
       </div>
 
       {selectedSites.length > 0 && (
-        <div className='my-2'>
+        <div>
           <label htmlFor="legendLabel"
-                 className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">Label for red pins (Legend)</label>
+                 className="text-sm text-gray-500 dark:text-gray-400 block mb-1.5">Label for red pins (Legend)</label>
           <input
             id="legendLabel"
             type="text"
             value={selectionLegendName}
             onChange={(e) => setSelectionLegendName && setSelectionLegendName(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md 
+            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                     transition-colors"
           />
         </div>
       )}
@@ -623,7 +625,7 @@ function DefaultInfoPanel({setSelectedSite, selectedSite, selectedSites=[], setS
             if (setSelectedSites) setSelectedSites([]);
             if (handleRegexChange) handleRegexChange('');
           }}
-          className="w-full px-3 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors mt-2"
+          className="w-full px-3 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
         >
           Clear Selection ({selectedSites.length})
         </button>
@@ -661,25 +663,22 @@ export default function MapInfoPanel({site, setSelectedSite, selectedSites=[], s
     else
       return acc;
   }, 0);
-  console.log(site);
   return (
-    <div className="p-2 md:p-0">
-      <div className='mb-2'>
+    <div className="p-2 space-y-4">
+      <div>
         <SiteSelectBox selectedSite={site} setSelectedSite={setSelectedSite}/>
       </div>
-      <div className='flex flex-row flex-wrap gap-2 mb-2'>
+      <div className='flex flex-row flex-wrap gap-2'>
         <Badge icon={RiServerLine} color="green">{site.nodes.length} Nodes Online</Badge>
         {totalGpus > 0 && <Badge icon={RiCpuLine} color="blue">{totalGpus} GPUs</Badge>}
         {totalCaches > 0 && <Badge icon={RiDatabase2Line} color="violet">{totalCaches} OSDF Nodes</Badge>}
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-4">
         <SiteStats site={site} timeRange={timeRange}/>
         {totalGpus > 0 ? <SiteGpuStats site={site} timeRange={timeRange}/> : null}
         {totalGpus > 0 ? <SiteGpuTypes site={site}/> : null}
         <SiteNetworkStats site={site} timeRange={timeRange}/>
       </div>
-
-
     </div>
   )
 }
