@@ -37,7 +37,21 @@ const TRAFFIC_COLOR_EXPRESSION = [
   '#22ff88',
 ];
 
-const PULSE_EXPRESSION = ['coalesce', ['get', 'pulse'], 0];
+function buildPulseRadius(pulseValue) {
+  return [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    1,
+    ['+', 28, ['*', TRAFFIC_NORM_EXPRESSION, 4], ['*', pulseValue, 4]],
+    5,
+    ['+', 34, ['*', TRAFFIC_NORM_EXPRESSION, 5], ['*', pulseValue, 6]],
+  ];
+}
+
+function buildPulseOpacity(pulseValue) {
+  return ['+', 0.03, ['*', pulseValue, 0.08], ['*', TRAFFIC_NORM_EXPRESSION, 0.02]];
+}
 
 const pulseLayer = {
   id: PULSE_LAYER_ID,
@@ -45,16 +59,8 @@ const pulseLayer = {
   ...(ENABLE_CLUSTERING ? { filter: ['!', ['has', 'point_count']] } : {}),
   paint: {
     'circle-color': TRAFFIC_COLOR_EXPRESSION,
-    'circle-radius': [
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      1,
-      ['+', 28, ['*', TRAFFIC_NORM_EXPRESSION, 4], ['*', PULSE_EXPRESSION, 4]],
-      5,
-      ['+', 34, ['*', TRAFFIC_NORM_EXPRESSION, 5], ['*', PULSE_EXPRESSION, 6]],
-    ],
-    'circle-opacity': ['+', 0.03, ['*', PULSE_EXPRESSION, 0.08], ['*', TRAFFIC_NORM_EXPRESSION, 0.02]],
+    'circle-radius': buildPulseRadius(0),
+    'circle-opacity': buildPulseOpacity(0),
     'circle-blur': 0.85,
     'circle-opacity-transition': { duration: 140, delay: 0 },
     'circle-radius-transition': { duration: 140, delay: 0 },
@@ -213,20 +219,35 @@ export default function OsdfMap({
   const mapRef = useRef(null);
   const hoveredFeatureIdRef = useRef(null);
   const styleTunedRef = useRef(false);
-  const pulsePhaseRef = useRef(0);
+  const pulseRafRef = useRef(null);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [selectedFeatureId, setSelectedFeatureId] = useState(null);
   const [popupAnchor, setPopupAnchor] = useState('left');
-  const [pulsePhase, setPulsePhase] = useState(0);
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      pulsePhaseRef.current = (pulsePhaseRef.current + 0.35) % (Math.PI * 2);
-      setPulsePhase(pulsePhaseRef.current);
-    }, 120);
+    let phase = 0;
+    const tick = () => {
+      phase = (phase + 0.35) % (Math.PI * 2);
+      const pulseValue = 0.5 + 0.5 * Math.sin(phase);
+      const map = mapRef.current?.getMap();
+      if (map && map.getLayer(PULSE_LAYER_ID)) {
+        try {
+          map.setPaintProperty(PULSE_LAYER_ID, 'circle-radius', buildPulseRadius(pulseValue));
+          map.setPaintProperty(PULSE_LAYER_ID, 'circle-opacity', buildPulseOpacity(pulseValue));
+        } catch (error) {
+          // Safe no-op when layer is not yet ready.
+        }
+      }
+      pulseRafRef.current = requestAnimationFrame(tick);
+    };
+    pulseRafRef.current = requestAnimationFrame(tick);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      if (pulseRafRef.current != null) {
+        cancelAnimationFrame(pulseRafRef.current);
+      }
+    };
   }, []);
 
   const enrichedNodes = useMemo(() => enrichNodeTraffic(nodes), [nodes]);
@@ -251,11 +272,10 @@ export default function OsdfMap({
           institution: node.institution,
           trafficTotal: node.totalTraffic,
           trafficNorm: node.trafficNorm,
-          pulse: 0.5 + 0.5 * Math.sin(pulsePhase),
         },
       })),
     }),
-    [enrichedNodes, pulsePhase],
+    [enrichedNodes],
   );
 
   useEffect(() => {
