@@ -415,8 +415,8 @@ export default function OsdfMap({
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
         mapStyle="mapbox://styles/djw8605/cmm2idej2002r01qo03vef41r"
         initialViewState={{
-          longitude: 8,
-          latitude: 20,
+          longitude: -98.5,
+          latitude: 39.8,
           zoom: 1.8,
         }}
         style={{ width: '100%', height: '100%', minHeight: 600 }}
