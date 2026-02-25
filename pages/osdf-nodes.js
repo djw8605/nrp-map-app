@@ -8,7 +8,7 @@ import { OSDF_TRAFFIC_WINDOW_MINUTES, useOsdfTraffic } from '../hooks/useOsdfTra
 const OsdfMap = dynamic(() => import('../components/osdf/OsdfMap'), {
   ssr: false,
   loading: () => (
-    <div className="min-h-[600px] w-full animate-pulse rounded-2xl border border-slate-700 bg-slate-800/50" />
+    <div className="min-h-[650px] w-full animate-pulse bg-slate-800/50" />
   ),
 });
 
@@ -111,15 +111,15 @@ export default function OsdfNodesPage() {
               Failed to load node locations from <code>/api/nodes</code>.
             </div>
           ) : null}
+        </div>
 
-          <div className="mt-6">
-            <OsdfMap
-              nodes={mappedNodes}
-              isNodesLoading={isNodesLoading}
-              isTrafficLoading={isTrafficLoading}
-              trafficError={trafficError}
-            />
-          </div>
+        <div className="mt-8">
+          <OsdfMap
+            nodes={mappedNodes}
+            isNodesLoading={isNodesLoading}
+            isTrafficLoading={isTrafficLoading}
+            trafficError={trafficError}
+          />
         </div>
       </main>
     </>

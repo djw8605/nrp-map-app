@@ -352,7 +352,7 @@ export default function OsdfMap({
   }, [clearFeatureHover]);
 
   return (
-    <div className="osdf-map relative h-[600px] min-h-[600px] w-full overflow-hidden rounded-2xl border border-slate-700 bg-slate-950">
+    <div className="osdf-map relative min-h-[650px] w-full overflow-hidden bg-slate-950">
       <MapView
         ref={mapRef}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
