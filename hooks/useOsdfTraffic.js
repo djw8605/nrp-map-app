@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 
 export const OSDF_TRAFFIC_WINDOW_MINUTES = 60;
@@ -45,6 +45,13 @@ export function useOsdfTraffic(options = {}) {
     keepPreviousData: true,
     dedupingInterval: 15000,
   });
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+
+  useEffect(() => {
+    if (data) {
+      setLastUpdatedAt(new Date());
+    }
+  }, [data]);
 
   useEffect(() => {
     if (!key) return undefined;
@@ -76,5 +83,6 @@ export function useOsdfTraffic(options = {}) {
     traffic: data || EMPTY_TRAFFIC,
     isLoading,
     error,
+    lastUpdatedAt,
   };
 }

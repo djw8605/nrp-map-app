@@ -80,7 +80,12 @@ export default function OsdfNodesPage() {
 
   const osdfNodes = useMemo(() => extractOsdfNodes(normalizeSites(nodesPayload)), [nodesPayload]);
   const osdfNodeIds = useMemo(() => osdfNodes.map((node) => node.nodeId), [osdfNodes]);
-  const { traffic, isLoading: isTrafficLoading, error: trafficError } = useOsdfTraffic({
+  const {
+    traffic,
+    isLoading: isTrafficLoading,
+    error: trafficError,
+    lastUpdatedAt,
+  } = useOsdfTraffic({
     windowMinutes: OSDF_TRAFFIC_WINDOW_MINUTES,
     nodeIds: osdfNodeIds,
     enabled: !isNodesLoading,
@@ -96,7 +101,19 @@ export default function OsdfNodesPage() {
 
       <main className="min-h-screen bg-slate-900 text-slate-100">
         <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-100">OSDF nodes</h1>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-100">OSDF nodes</h1>
+            <div className="text-xs font-medium text-slate-400">
+              Updated at{' '}
+              {lastUpdatedAt
+                ? lastUpdatedAt.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                  })
+                : '--'}
+            </div>
+          </div>
 
           <div className="mt-5">
             <OsdfKpis
@@ -113,7 +130,7 @@ export default function OsdfNodesPage() {
           ) : null}
         </div>
 
-        <div className="mt-8">
+        <div className="mt-2">
           <OsdfMap
             nodes={mappedNodes}
             isNodesLoading={isNodesLoading}
