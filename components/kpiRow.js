@@ -1,13 +1,14 @@
 'use client'
 import { Card } from '@tremor/react';
-import { RiServerLine, RiCpuLine, RiMapPinLine, RiDashboard3Line } from '@remixicon/react';
+import Link from 'next/link';
+import { RiServerLine, RiCpuLine, RiMapPinLine, RiDashboard3Line, RiDatabase2Line } from '@remixicon/react';
 import useSWR from 'swr';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { fetcher } from '../lib/fetcher';
 import { formatCompactNumber } from '../lib/formatUtils';
 
-function KpiCard({ title, value, icon: Icon, iconColor, description }) {
+function KpiCard({ title, value, icon: Icon, iconColor, description, linkHref, linkText }) {
   return (
     <Card className="rounded-xl shadow-sm p-4">
       <div className="flex items-center justify-between gap-3">
@@ -27,6 +28,14 @@ function KpiCard({ title, value, icon: Icon, iconColor, description }) {
           <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
             {description}
           </p>
+          {linkHref && linkText ? (
+            <Link
+              href={linkHref}
+              className="mt-2 inline-flex text-xs font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              {linkText}
+            </Link>
+          ) : null}
         </div>
         <Icon className={`h-7 w-7 ${iconColor} flex-shrink-0`} aria-hidden="true" />
       </div>
@@ -41,6 +50,7 @@ export default function KpiRow() {
   let totalNodes = null;
   let totalGPUs = null;
   let totalCPUs = null;
+  let totalOsdfNodes = null;
 
   if (Nodes && Array.isArray(Nodes)) {
     totalSites = Nodes.length;
@@ -49,11 +59,13 @@ export default function KpiRow() {
       acc + (site.nodes ? site.nodes.reduce((n, node) => n + (parseInt(node.gpus) || 0), 0) : 0), 0);
     totalCPUs = Nodes.reduce((acc, site) =>
       acc + (site.nodes ? site.nodes.reduce((n, node) => n + (parseInt(node.cpus) || 0), 0) : 0), 0);
+    totalOsdfNodes = Nodes.reduce((acc, site) =>
+      acc + (site.nodes ? site.nodes.reduce((n, node) => n + (node?.cache === true ? 1 : 0), 0) : 0), 0);
   }
 
   return (
     <div className="container mx-auto px-2 sm:px-0">
-      <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard
           title="Sites"
           value={totalSites != null ? formatCompactNumber(totalSites) : null}
@@ -81,6 +93,15 @@ export default function KpiRow() {
           icon={RiCpuLine}
           iconColor="text-orange-500"
           description="Across all nodes"
+        />
+        <KpiCard
+          title="OSDF NODES"
+          value={totalOsdfNodes != null ? formatCompactNumber(totalOsdfNodes) : null}
+          icon={RiDatabase2Line}
+          iconColor="text-violet-500"
+          description="Nodes serving OSDF cache"
+          linkHref="/osdf-nodes"
+          linkText="View OSDF Dashboard →"
         />
       </dl>
     </div>

@@ -415,6 +415,7 @@ export default function OsdfMap({
                 longitude={node.longitude}
                 latitude={node.latitude}
                 anchor="center"
+                style={{ pointerEvents: 'none' }}
               >
                 <div
                   className="osdf-pulse-ring"
@@ -428,7 +429,7 @@ export default function OsdfMap({
           <Popup
             className="osdf-popup"
             anchor={popupAnchor}
-            closeOnClick={true}
+            closeOnClick={false}
             maxWidth="360px"
             longitude={Number(selectedNode.longitude)}
             latitude={Number(selectedNode.latitude)}

@@ -255,6 +255,11 @@ thead {
   }
 }
 
+/* Let pulse marker wrappers pass clicks through to the map canvas */
+.osdf-map .mapboxgl-marker:has(.osdf-pulse-ring) {
+  pointer-events: none !important;
+}
+
 .osdf-pulse-ring {
   width: 24px;
   height: 24px;
