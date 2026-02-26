@@ -39,7 +39,7 @@ const TRAFFIC_COLOR_EXPRESSION = [
 
 const PULSE_COLORS = ['#ff9f1c', '#ffd166', '#22ff88'];
 const HIGH_TRAFFIC_THRESHOLD = 0.775;
-const MID_TRAFFIC_THRESHOLD = 0.275;
+const MID_TRAFFIC_THRESHOLD = 0.55;
 
 const outerHaloLayer = {
   id: OUTER_HALO_LAYER_ID,
