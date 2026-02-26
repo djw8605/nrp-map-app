@@ -130,7 +130,7 @@ export default function OsdfNodesPage() {
           ) : null}
         </div>
 
-        <div className="mt-8">
+        <div className="mt-2">
           <OsdfMap
             nodes={mappedNodes}
             isNodesLoading={isNodesLoading}
