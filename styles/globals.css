@@ -246,23 +246,19 @@ thead {
 /* OSDF node pulse ring — pure CSS animation */
 @keyframes osdf-pulse {
   0%, 100% {
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1);
     opacity: 0.45;
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.6);
+    transform: scale(1.6);
     opacity: 0;
   }
 }
 
 .osdf-pulse-ring {
-  position: absolute;
-  left: 50%;
-  top: 50%;
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
   animation: osdf-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   pointer-events: none;
 }
