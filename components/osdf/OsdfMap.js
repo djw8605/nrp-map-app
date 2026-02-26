@@ -53,6 +53,8 @@ function buildPulseOpacity(pulseValue) {
   return ['+', 0.03, ['*', pulseValue, 0.08], ['*', TRAFFIC_NORM_EXPRESSION, 0.02]];
 }
 
+const PULSE_HALF_PERIOD_MS = 1250;
+
 const pulseLayer = {
   id: PULSE_LAYER_ID,
   type: 'circle',
@@ -62,8 +64,8 @@ const pulseLayer = {
     'circle-radius': buildPulseRadius(0),
     'circle-opacity': buildPulseOpacity(0),
     'circle-blur': 0.85,
-    'circle-opacity-transition': { duration: 140, delay: 0 },
-    'circle-radius-transition': { duration: 140, delay: 0 },
+    'circle-opacity-transition': { duration: PULSE_HALF_PERIOD_MS, delay: 0 },
+    'circle-radius-transition': { duration: PULSE_HALF_PERIOD_MS, delay: 0 },
   },
 };
 
@@ -219,42 +221,27 @@ export default function OsdfMap({
   const mapRef = useRef(null);
   const hoveredFeatureIdRef = useRef(null);
   const styleTunedRef = useRef(false);
-  const pulseRafRef = useRef(null);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [selectedFeatureId, setSelectedFeatureId] = useState(null);
   const [popupAnchor, setPopupAnchor] = useState('left');
 
   useEffect(() => {
-    let start = null;
-    const PULSE_PERIOD_MS = 2500;
-    // Cubic ease-in-out for smooth pulsing
-    const easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    const tick = (timestamp) => {
-      if (start === null) start = timestamp;
-      const elapsed = (timestamp - start) % PULSE_PERIOD_MS;
-      const t = elapsed / PULSE_PERIOD_MS;
-      // Map 0→1 to 0→1→0 with easing
-      const linear = t < 0.5 ? t * 2 : 2 - t * 2;
-      const pulseValue = easeInOutCubic(linear);
+    let isExpanded = false;
+    const interval = setInterval(() => {
       const map = mapRef.current?.getMap();
       if (map && map.getLayer(PULSE_LAYER_ID)) {
+        isExpanded = !isExpanded;
+        const pulseValue = isExpanded ? 1 : 0;
         try {
           map.setPaintProperty(PULSE_LAYER_ID, 'circle-radius', buildPulseRadius(pulseValue));
           map.setPaintProperty(PULSE_LAYER_ID, 'circle-opacity', buildPulseOpacity(pulseValue));
-        } catch (error) {
+        } catch {
           // Safe no-op when layer is not yet ready.
         }
       }
-      pulseRafRef.current = requestAnimationFrame(tick);
-    };
-    pulseRafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (pulseRafRef.current != null) {
-        cancelAnimationFrame(pulseRafRef.current);
-      }
-    };
+    }, PULSE_HALF_PERIOD_MS);
+    return () => clearInterval(interval);
   }, []);
 
   const enrichedNodes = useMemo(() => enrichNodeTraffic(nodes), [nodes]);
