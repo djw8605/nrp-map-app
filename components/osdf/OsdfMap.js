@@ -226,10 +226,17 @@ export default function OsdfMap({
   const [popupAnchor, setPopupAnchor] = useState('left');
 
   useEffect(() => {
-    let phase = 0;
-    const tick = () => {
-      phase = (phase + 0.35) % (Math.PI * 2);
-      const pulseValue = 0.5 + 0.5 * Math.sin(phase);
+    let start = null;
+    const PULSE_PERIOD_MS = 2500;
+    // Cubic ease-in-out for smooth pulsing
+    const easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const tick = (timestamp) => {
+      if (start === null) start = timestamp;
+      const elapsed = (timestamp - start) % PULSE_PERIOD_MS;
+      const t = elapsed / PULSE_PERIOD_MS;
+      // Map 0→1 to 0→1→0 with easing
+      const linear = t < 0.5 ? t * 2 : 2 - t * 2;
+      const pulseValue = easeInOutCubic(linear);
       const map = mapRef.current?.getMap();
       if (map && map.getLayer(PULSE_LAYER_ID)) {
         try {
