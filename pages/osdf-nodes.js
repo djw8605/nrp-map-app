@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import useSWR from 'swr';
 import OsdfKpis from '../components/osdf/OsdfKpis';
+import Footer from '../components/footer';
 import { OSDF_TRAFFIC_WINDOW_MINUTES, useOsdfTraffic } from '../hooks/useOsdfTraffic';
 
 const OsdfMap = dynamic(() => import('../components/osdf/OsdfMap'), {
@@ -139,6 +140,12 @@ export default function OsdfNodesPage() {
           />
         </div>
       </main>
+
+      <Footer
+        colorClassName="osdf-footer-color"
+        textClassName="text-sm text-slate-300"
+        wrapperStyle={{ marginTop: 0 }}
+      />
     </>
   );
 }

@@ -31,6 +31,10 @@ thead {
     @apply bg-blue-900 text-white;
 }
 
+.osdf-footer-color {
+  @apply bg-slate-950 text-slate-100;
+}
+
 /* Concentric rings loader (renamed classes: loading-ring) */
 .concentric-loader {
   position: relative;
