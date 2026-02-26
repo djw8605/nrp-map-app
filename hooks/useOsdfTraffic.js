@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
 
 export const OSDF_TRAFFIC_WINDOW_MINUTES = 60;
@@ -39,19 +39,19 @@ export function buildOsdfTrafficKey({
 
 export function useOsdfTraffic(options = {}) {
   const key = buildOsdfTrafficKey(options);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+
+  const onSuccess = useCallback(() => {
+    setLastUpdatedAt(new Date());
+  }, []);
+
   const { data, error, isLoading, mutate } = useSWR(key, fetcher, {
     refreshInterval: 0,
     revalidateOnFocus: false,
     keepPreviousData: true,
     dedupingInterval: 15000,
+    onSuccess,
   });
-  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
-
-  useEffect(() => {
-    if (data) {
-      setLastUpdatedAt(new Date());
-    }
-  }, [data]);
 
   useEffect(() => {
     if (!key) return undefined;
