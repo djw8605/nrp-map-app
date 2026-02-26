@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MapView, {
   FullscreenControl,
   Layer,
+  Marker,
   NavigationControl,
   Popup,
   Source,
@@ -16,7 +17,6 @@ const ACTIVE_SOURCE_ID = ENABLE_CLUSTERING ? CLUSTER_SOURCE_ID : SOURCE_ID;
 const OUTER_HALO_LAYER_ID = 'osdf-outer-halo-layer';
 const MID_HALO_LAYER_ID = 'osdf-mid-halo-layer';
 const CORE_LAYER_ID = 'osdf-core-layer';
-const PULSE_LAYER_ID = 'osdf-pulse-layer';
 const CLUSTER_LAYER_ID = 'osdf-cluster-layer';
 const CLUSTER_COUNT_LAYER_ID = 'osdf-cluster-count-layer';
 
@@ -37,37 +37,9 @@ const TRAFFIC_COLOR_EXPRESSION = [
   '#22ff88',
 ];
 
-function buildPulseRadius(pulseValue) {
-  return [
-    'interpolate',
-    ['linear'],
-    ['zoom'],
-    1,
-    ['+', 28, ['*', TRAFFIC_NORM_EXPRESSION, 4], ['*', pulseValue, 4]],
-    5,
-    ['+', 34, ['*', TRAFFIC_NORM_EXPRESSION, 5], ['*', pulseValue, 6]],
-  ];
-}
-
-function buildPulseOpacity(pulseValue) {
-  return ['+', 0.03, ['*', pulseValue, 0.08], ['*', TRAFFIC_NORM_EXPRESSION, 0.02]];
-}
-
-const PULSE_HALF_PERIOD_MS = 1250;
-
-const pulseLayer = {
-  id: PULSE_LAYER_ID,
-  type: 'circle',
-  ...(ENABLE_CLUSTERING ? { filter: ['!', ['has', 'point_count']] } : {}),
-  paint: {
-    'circle-color': TRAFFIC_COLOR_EXPRESSION,
-    'circle-radius': buildPulseRadius(0),
-    'circle-opacity': buildPulseOpacity(0),
-    'circle-blur': 0.85,
-    'circle-opacity-transition': { duration: PULSE_HALF_PERIOD_MS, delay: 0 },
-    'circle-radius-transition': { duration: PULSE_HALF_PERIOD_MS, delay: 0 },
-  },
-};
+const PULSE_COLORS = ['#ff9f1c', '#ffd166', '#22ff88'];
+const HIGH_TRAFFIC_THRESHOLD = 0.775;
+const MID_TRAFFIC_THRESHOLD = 0.275;
 
 const outerHaloLayer = {
   id: OUTER_HALO_LAYER_ID,
@@ -180,6 +152,12 @@ function enrichNodeTraffic(nodes) {
   });
 }
 
+function getPulseColor(trafficNorm) {
+  if (trafficNorm >= HIGH_TRAFFIC_THRESHOLD) return PULSE_COLORS[2];
+  if (trafficNorm >= MID_TRAFFIC_THRESHOLD) return PULSE_COLORS[1];
+  return PULSE_COLORS[0];
+}
+
 function softenCompetingStyleLayers(mapInstance) {
   const style = mapInstance.getStyle();
   const layers = style?.layers || [];
@@ -225,24 +203,6 @@ export default function OsdfMap({
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [selectedFeatureId, setSelectedFeatureId] = useState(null);
   const [popupAnchor, setPopupAnchor] = useState('left');
-
-  useEffect(() => {
-    let isExpanded = false;
-    const interval = setInterval(() => {
-      const map = mapRef.current?.getMap();
-      if (map && map.getLayer(PULSE_LAYER_ID)) {
-        isExpanded = !isExpanded;
-        const pulseValue = isExpanded ? 1 : 0;
-        try {
-          map.setPaintProperty(PULSE_LAYER_ID, 'circle-radius', buildPulseRadius(pulseValue));
-          map.setPaintProperty(PULSE_LAYER_ID, 'circle-opacity', buildPulseOpacity(pulseValue));
-        } catch {
-          // Safe no-op when layer is not yet ready.
-        }
-      }
-    }, PULSE_HALF_PERIOD_MS);
-    return () => clearInterval(interval);
-  }, []);
 
   const enrichedNodes = useMemo(() => enrichNodeTraffic(nodes), [nodes]);
   const nodeByFeatureId = useMemo(
@@ -442,12 +402,27 @@ export default function OsdfMap({
                 <Layer {...clusterCountLayer} />
               </>
             ) : null}
-            <Layer {...pulseLayer} />
             <Layer {...outerHaloLayer} />
             <Layer {...midHaloLayer} />
             <Layer {...coreLayer} />
           </Source>
         ) : null}
+
+        {isMapLoaded
+          ? enrichedNodes.map((node) => (
+              <Marker
+                key={`pulse-${node.id}`}
+                longitude={node.longitude}
+                latitude={node.latitude}
+                anchor="center"
+              >
+                <div
+                  className="osdf-pulse-ring"
+                  style={{ backgroundColor: getPulseColor(node.trafficNorm) }}
+                />
+              </Marker>
+            ))
+          : null}
 
         {selectedNode ? (
           <Popup
