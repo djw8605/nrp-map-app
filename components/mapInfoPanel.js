@@ -276,14 +276,14 @@ function SiteGpuStats({site, timeRange = '7d'}) {
 
   var cleaned_data = null;
   if (data) {
-    console.log(data);
-    // Convert Date to just the month/day
+    const dateFormatter = timeRange === '24h'
+      ? new Intl.DateTimeFormat(undefined, {hour: 'numeric'})
+      : new Intl.DateTimeFormat(undefined, {month: 'numeric', day: 'numeric'});
+
     cleaned_data = data.map((item) => {
-      console.log(item.time);
       let current_date = new Date(item.time);
-      return {"Date": (current_date.getMonth()+1) + "/" + current_date.getDate(), "GPU Hours": item.value}
+      return {"Date": dateFormatter.format(current_date), "GPU Hours": item.value}
     });
-    console.log(cleaned_data);
   }
 
   const dataFormatter = (number) =>

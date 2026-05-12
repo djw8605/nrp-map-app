@@ -17,9 +17,9 @@ export default async function handler(req, res) {
     return res.status(400).send('Missing site parameter');
   }
   const rangeMap = {
-    '24h': { label: '1d', ms: 24 * 60 * 60 * 1000, step: 3600 },
-    '7d': { label: '7d', ms: 7 * 24 * 60 * 60 * 1000, step: 24 * 3600 },
-    '30d': { label: '30d', ms: 30 * 24 * 60 * 60 * 1000, step: 24 * 3600 },
+    '24h': { bucket: '1h', ms: 24 * 60 * 60 * 1000, step: 3600 },
+    '7d': { bucket: '1d', ms: 7 * 24 * 60 * 60 * 1000, step: 24 * 3600 },
+    '30d': { bucket: '1d', ms: 30 * 24 * 60 * 60 * 1000, step: 24 * 3600 },
   };
   const rangeConfig = rangeMap[range] || rangeMap['7d'];
 
@@ -41,10 +41,11 @@ export default async function handler(req, res) {
     }
 
     // Combine all node names into a regex
-    var nodeRegex = nodes.reduce((acc, val) => acc + "|" + val.name, "").substring(1);
+    var nodeRegex = nodes
+      .map((node) => node.name.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&'))
+      .join('|');
 
-    // Use increase to get GPU hours consumed per day, not cumulative
-    const query = `sum(increase(namespace_allocated_resources{node=~'${nodeRegex}', resource=~'nvidia_com.*'}[1d]))`;
+    const query = `sum(sum_over_time(namespace_allocated_resources{node=~'${nodeRegex}', resource=~'nvidia_com.*'}[${rangeConfig.bucket}:1h]))`;
 
     // Get the current date
     var end = new Date();
@@ -52,32 +53,12 @@ export default async function handler(req, res) {
     var start = new Date(end.getTime() - rangeConfig.ms);
 
     var results = await prom.rangeQuery(query, start, end, rangeConfig.step);
-    let gpuRegex = /nvidia_com.*/;
-    console.log("Site GPUs:");
-    //console.log(results);
     var to_return = [];
-    console.log(results.result[0].values);
-    for (var i = 0; i < results.result[0].values.length; i++) {
-      console.log(results.result[0].values[i].time);
-      to_return.push({ "time": results.result[0].values[i].time, "value": results.result[0].values[i].value });
-      //console.log(results.result[i].metric);
-      //console.log(results.result[i].values);
-    }
-    //let to_return = { "gpuHours": 0, "cpuHours": 0}
-
-    /*
-    for (var i = 0; i < results.result.length; i++) {
-      console.log(results.result[i].metric.labels.resource);
-      if (gpuRegex.test(results.result[i].metric.labels.resource)) {
-        to_return["gpuHours"] += parseFloat(results.result[i].value.value);
-      } else {
-        to_return["cpuHours"] += parseFloat(results.result[i].value.value);
+    if (results.result.length > 0) {
+      for (var i = 0; i < results.result[0].values.length; i++) {
+        to_return.push({ "time": results.result[0].values[i].time, "value": results.result[0].values[i].value });
       }
-      //results.result[i].value.value = parseFloat(results.result[i].value.value);
     }
-    */
-    //console.log(to_return);
-    console.log(to_return);
 
     res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate')
     res.setHeader('Content-Type', 'application/json');

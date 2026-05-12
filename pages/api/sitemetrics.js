@@ -41,7 +41,9 @@ export default async function handler(req, res) {
     }
 
     // Combine all node names into a regex
-    var nodeRegex = nodes.reduce((acc, val) => acc + "|" + val.name, "").substring(1);
+    var nodeRegex = nodes
+      .map((node) => node.name.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&'))
+      .join('|');
     
     const query = `sum by (resource) (sum_over_time(namespace_allocated_resources{node=~'${nodeRegex}', resource=~'nvidia_com.*|cpu'}[${rangeConfig.label}:1h]))`;
     var multiResults = await Promise.all([
@@ -59,7 +61,6 @@ export default async function handler(req, res) {
       "prevCpuHours": 0,
     }
     for (var i = 0; i < results.result.length; i++) {
-      console.log(results.result[i].metric.labels.resource);
       if (gpuRegex.test(results.result[i].metric.labels.resource)) {
         to_return["gpuHours"] += parseFloat(results.result[i].value.value);
       } else {
@@ -68,7 +69,6 @@ export default async function handler(req, res) {
     }
 
     for (var i = 0; i < prevResults.result.length; i++) {
-      console.log(prevResults.result[i].metric.labels.resource);
       if (gpuRegex.test(prevResults.result[i].metric.labels.resource)) {
         to_return["prevGpuHours"] += parseFloat(prevResults.result[i].value.value);
       } else {
