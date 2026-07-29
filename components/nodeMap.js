@@ -62,6 +62,12 @@ export default function NodeMap({
     return selectedSites && selectedSites.some(s => s.id === node.id);
   };
 
+  // Helper to check if a site is OSDF exclusive (all nodes are cache nodes)
+  const isOsdfExclusive = (node) => {
+    if (!node.nodes || node.nodes.length === 0) return false;
+    return node.nodes.every(n => n.cache === true);
+  };
+
   // Helper to toggle site selection
   const toggleSiteSelection = (node) => {
     if (!setSelectedSites) return;
@@ -157,11 +163,21 @@ export default function NodeMap({
     const computedSize = Math.max(Math.min(6.5 * (zoom || 1), 34), 18);
     const computedSelectedSize = Math.max(Math.min(6.5 * (zoom || 1) * 1.22, 40), 22);
 
-    return sites.map((node) => {
+    // Render OSDF-exclusive pins last so they stack on top of nearby regular
+    // NRP pins (e.g. Internet2 Denver / Boise pairs are registered separately
+    // but at almost the same coordinates).
+    const sortedSites = [...sites].sort((a, b) => {
+      const aOsdf = isOsdfExclusive(a) ? 1 : 0;
+      const bOsdf = isOsdfExclusive(b) ? 1 : 0;
+      return aOsdf - bOsdf;
+    });
+
+    return sortedSites.map((node) => {
       const isSelected = node === selectedSite;
       const isMultiSelected = isSiteSelected(node);
       const highlighted = isSelected || isMultiSelected;
       const finalSize = highlighted ? computedSelectedSize : computedSize;
+      const osdfExclusive = isOsdfExclusive(node);
 
       return (
         <Marker key={node.id}
@@ -179,7 +195,7 @@ export default function NodeMap({
             }
           }}
         >
-          <SitePinMarker isSelected={highlighted} size={finalSize} title={node.name} />
+ <SitePinMarker isSelected={highlighted} isOsdfExclusive={osdfExclusive} size={finalSize} title={node.name} />
         </Marker>
       );
     });
@@ -233,6 +249,10 @@ export default function NodeMap({
           <li className="flex flex-row items-center gap-2.5">
             <SitePinMarker size={LEGEND_PIN_SIZE} interactive={false} />
             NRP Site
+          </li>
+          <li className="flex flex-row items-center gap-2.5">
+            <SitePinMarker isOsdfExclusive size={LEGEND_PIN_SIZE} interactive={false} />
+            OSDF Exclusive Site
           </li>
           {selectedSites && selectedSites.length > 0 && (
             <li className="flex flex-row items-center gap-2.5 border-t border-slate-300/60 pt-2 dark:border-slate-600/60">
