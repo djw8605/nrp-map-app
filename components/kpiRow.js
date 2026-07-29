@@ -13,7 +13,7 @@ function KpiCard({ title, value, icon: Icon, iconColor, description, linkHref, l
     <Card className="rounded-xl shadow-sm p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
             {title}
           </p>
           {value != null ? (
@@ -25,7 +25,7 @@ function KpiCard({ title, value, icon: Icon, iconColor, description, linkHref, l
               <Skeleton height={32} width={80} />
             </div>
           )}
-          <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+          <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
             {description}
           </p>
           {linkHref && linkText ? (

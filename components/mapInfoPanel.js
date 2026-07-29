@@ -1,26 +1,23 @@
-'use client'
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {
-  faLocationDot,
-  faExpand,
-  faServer,
-  faCircle,
-  faNetworkWired,
-  faMicrochip,
   faRotateRight,
-  faChartColumn, faCircleArrowUp, faCircleArrowDown
+  faCircleArrowUp, faCircleArrowDown
 } from "@fortawesome/free-solid-svg-icons";
 import useSWR from 'swr'
-import {Badge, BarChart, Card, SparkAreaChart, BadgeDelta, Flex, Table, TableHead, TableRow, TableHeaderCell, TableBody, TableCell} from '@tremor/react';
-import {RiCpuLine, RiServerLine, RiDatabase2Line} from '@remixicon/react';
-import Select from 'react-select'
-import {useState, useEffect, useMemo} from 'react';
+import {Badge, BarChart, Card, SparkAreaChart, BadgeDelta, Table, TableHead, TableRow, TableHeaderCell, TableBody, TableCell} from '@tremor/react';
+import {useEffect, useMemo} from 'react';
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import { fetcher } from '../lib/fetcher';
 import { reportPrometheusError } from '../lib/prometheusToastStore';
-import { formatCompactNumber, formatThroughput } from '../lib/formatUtils';
-import SectionHeader from './SectionHeader';
+import { formatCompactNumber } from '../lib/formatUtils';
+
+/*
+ * Fixed metrics window. Previously driven by a global 24h/7d/30d selector; that
+ * selector was removed and every panel had been rendering at 24h, so this pins
+ * the behaviour that was actually shipping.
+ */
+const METRICS_RANGE = '24h';
 
 /**
  * Format bytes as human-readable text.
@@ -70,7 +67,7 @@ function NetworkCard({data, currentValue, title, icon, iconColor, graphColor}) {
     <Card className="w-full flex flex-col justify-between rounded-xl shadow-sm p-0">
       <div className="flex flex-row justify-between items-center px-4 pt-4">
         <div className="flex flex-col items-start">
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{title}</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">{title}</p>
           <p className="text-xl font-bold text-tremor-content-strong dark:text-dark-tremor-content-strong">
             {data ? currentValue : "Loading..."}
           </p>
@@ -94,9 +91,9 @@ function NetworkCard({data, currentValue, title, icon, iconColor, graphColor}) {
   )
 }
 
-function SiteNetworkStats({site, timeRange = '24h'}) {
+export function SiteNetworkStats({site}) {
 
-  const {data, error} = useSWR(`/api/sitenetwork?site=${site.slug}&range=${timeRange}`, fetcher, {refreshInterval: 60000});
+  const {data, error} = useSWR(`/api/sitenetwork?site=${site.slug}&range=${METRICS_RANGE}`, fetcher, {refreshInterval: 60000});
   const errorMessage = error?.message || null;
   useEffect(() => {
     if (errorMessage) {
@@ -106,7 +103,6 @@ function SiteNetworkStats({site, timeRange = '24h'}) {
   var humanTransmit = "";
   var humanReceive = "";
   if (data) {
-    console.log(data);
     // Get the last element from data.transmit
     let last_transmit = data.transmit[data.transmit.length - 1];
     humanTransmit = humanTransferSpeed(last_transmit.value, true);
@@ -171,7 +167,7 @@ function MetricCard({title, value, belowText, difference}) {
 
   return (
     <div className='w-full p-4'>
-      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
         {title}
       </p>
       {value == null ? (
@@ -192,7 +188,7 @@ function MetricCard({title, value, belowText, difference}) {
                 {(difference * 100).toLocaleString(undefined, {maximumFractionDigits: 0})}%
               </BadgeDelta>
             )}
-            <span className="text-xs text-gray-400 dark:text-gray-500">{belowText}</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{belowText}</span>
           </div>
         </>
       )}
@@ -200,9 +196,9 @@ function MetricCard({title, value, belowText, difference}) {
   )
 }
 
-function SiteStats({site, timeRange = '7d'}) {
+export function SiteStats({site}) {
 
-  const {data, error} = useSWR(`/api/sitemetrics?site=${site.slug}&range=${timeRange}`, fetcher, {refreshInterval: 60000});
+  const {data, error} = useSWR(`/api/sitemetrics?site=${site.slug}&range=${METRICS_RANGE}`, fetcher, {refreshInterval: 60000});
   const errorMessage = error?.message || null;
   useEffect(() => {
     if (errorMessage) {
@@ -214,8 +210,7 @@ function SiteStats({site, timeRange = '7d'}) {
     return acc + parseInt(node.gpus)
   }, 0);
 
-  const periodLabels = { '24h': 'vs previous 24h', '7d': 'vs previous 7d', '30d': 'vs previous 30d' };
-  const periodLabel = periodLabels[timeRange] || 'vs previous period';
+  const periodLabel = 'vs previous 24h';
 
   if (errorMessage) {
     return (
@@ -228,9 +223,9 @@ function SiteStats({site, timeRange = '7d'}) {
   return (
     <Card className='w-full rounded-xl shadow-sm p-0 overflow-hidden'>
       <div className='px-4 pt-4 pb-2'>
-        <h3 className='text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400'>Compute Usage</h3>
+        <h3 className='text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'>Compute Usage</h3>
       </div>
-      <div className='grid grid-cols-2 divide-x divide-gray-200 dark:divide-gray-700'>
+      <div className='grid grid-cols-2 divide-x divide-slate-200 dark:divide-slate-700'>
         {totalGpus > 0 && (
           <MetricCard
             title="GPU Hours"
@@ -264,9 +259,9 @@ function StatusBadge({icon, text, color}) {
 
 }
 
-function SiteGpuStats({site, timeRange = '7d'}) {
+export function SiteGpuStats({site}) {
   // Fetch the GPU metrics
-  const {data, error} = useSWR(`/api/sitegpus?site=${site.slug}&range=${timeRange}`, fetcher, {refreshInterval: 60000});
+  const {data, error} = useSWR(`/api/sitegpus?site=${site.slug}&range=${METRICS_RANGE}`, fetcher, {refreshInterval: 60000});
   const errorMessage = error?.message || null;
   useEffect(() => {
     if (errorMessage) {
@@ -276,9 +271,7 @@ function SiteGpuStats({site, timeRange = '7d'}) {
 
   var cleaned_data = null;
   if (data) {
-    const dateFormatter = timeRange === '24h'
-      ? new Intl.DateTimeFormat(undefined, {hour: 'numeric'})
-      : new Intl.DateTimeFormat(undefined, {month: 'numeric', day: 'numeric'});
+    const dateFormatter = new Intl.DateTimeFormat(undefined, {hour: 'numeric'});
 
     cleaned_data = data.map((item) => {
       let current_date = new Date(item.time);
@@ -297,12 +290,7 @@ function SiteGpuStats({site, timeRange = '7d'}) {
     );
   }
 
-  const titleMap = {
-    '24h': 'GPU Hours (Hourly)',
-    '7d': 'GPU Hours per Day',
-    '30d': 'GPU Hours per Day',
-  };
-  const title = titleMap[timeRange] || 'GPU Hours per Day';
+  const title = 'GPU Hours (Hourly)';
 
   return (
     <Card
@@ -330,7 +318,7 @@ function SiteGpuStats({site, timeRange = '7d'}) {
 
 }
 
-function SiteGpuTypes({site}) {
+export function SiteGpuTypes({site}) {
 
   var gpuTypes = useMemo(() => {
     var tmpGpuTypes = new Map();
@@ -356,7 +344,7 @@ function SiteGpuTypes({site}) {
       </h3>
       <Table>
         <TableHead className="bg-transparent">
-          <TableRow className="border-b border-gray-200 dark:border-gray-700">
+          <TableRow className="border-b border-slate-200 dark:border-slate-700">
             <TableHeaderCell className="bg-transparent py-1">Type</TableHeaderCell>
             <TableHeaderCell className="text-right bg-transparent py-1">Count</TableHeaderCell>
           </TableRow>
@@ -373,334 +361,3 @@ function SiteGpuTypes({site}) {
     </Card>
   )
 }
-
-function SiteMultiSelectBox({selectedSites=[], setSelectedSites}) {
-  const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted || isLoading || !Nodes) {
-    return (
-      <div className="w-full">
-        <Skeleton height={44} />
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div>Error loading sites</div>;
-  }
-
-  const options = Nodes.map((node) => {
-    return (
-      {value: node.id, label: node.name, fullSite: node}
-    )
-  });
-
-  const formatOptionLabel = ({value, label, fullSite}) => (
-    <div className="flex flex-row gap-2 items-center text-black">
-      <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-red-500 text-xl"/>
-      <div>
-        <h2 className="text-xl font-bold">{fullSite.name}</h2>
-        {fullSite.name == fullSite.siteName ? null :
-          <h6
-            className="whitespace-nowrap truncate text-tremor-default text-tremor-content group-hover:text-tremor-content-emphasis  opacity-100 ">{fullSite.siteName}</h6>}
-      </div>
-    </div>
-  );
-
-  const selectedOptions = selectedSites.map(site => {
-    return options.find(opt => opt.value === site.id);
-  }).filter(Boolean);
-
-  const customStyles = {
-    control: (provided, state) => ({
-      ...provided,
-      minHeight: '38px',
-      maxHeight: '120px',
-      overflowY: 'auto',
-      overflowX: 'hidden',
-    }),
-    valueContainer: (provided) => ({
-      ...provided,
-      maxHeight: '118px',
-      overflowY: 'auto',
-      paddingTop: '2px',
-      paddingBottom: '2px',
-    }),
-    multiValue: (provided) => ({
-      ...provided,
-      maxWidth: 'calc(100% - 10px)',
-      margin: '2px',
-    }),
-    menu: (provided) => ({
-      ...provided,
-      maxHeight: '200px',
-      zIndex: 9999,
-    }),
-    menuList: (provided) => ({
-      ...provided,
-      maxHeight: '200px',
-      overflowY: 'auto',
-    }),
-  };
-
-  return (
-    <>
-      <Select
-        isMulti
-        options={options}
-        formatOptionLabel={formatOptionLabel}
-        onChange={(selectedOptions) => {
-          if (!setSelectedSites) return;
-          const selected = selectedOptions ? selectedOptions.map(opt => opt.fullSite) : [];
-          setSelectedSites(selected);
-        }}
-        value={selectedOptions}
-        placeholder="Select multiple sites..."
-        styles={customStyles}
-      >
-      </Select>
-    </>
-  )
-}
-
-function SiteSelectBox({selectedSite, setSelectedSite}) {
-  // Fetch nodes data from API
-  const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
-
-  const internalSetSelectedSite = ({value, label, fullSite}) => {
-    console.log("Setting selected site");
-    console.log(fullSite);
-    console.log(value);
-    setSelectedSite(fullSite);
-  }
-
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
-    return null;
-  }
-
-  // Show skeletons while nodes are loading
-  if (isLoading) {
-    return (
-      <div className="w-full">
-        <Skeleton height={44} />
-        <div className="mt-2">
-          <Skeleton height={12} width={200} />
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !Nodes) {
-    return <div>Error loading sites</div>;
-  }
-
-  const options = Nodes.map((node) => {
-    return (
-      {value: node.slug, label: node.name, fullSite: node}
-    )
-  });
-
-  const formatOptionLabel = ({value, label, fullSite}) => (
-
-    <div className="flex flex-row gap-2 items-center text-black">
-      <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-red-500 text-xl"/>
-      <div>
-        <h2 className="text-xl font-bold">{fullSite.name}</h2>
-        {fullSite.name == fullSite.siteName ? null :
-          <h6
-            className="whitespace-nowrap truncate text-tremor-default text-tremor-content group-hover:text-tremor-content-emphasis  opacity-100 ">{fullSite.siteName}</h6>}
-      </div>
-    </div>
-  );
-
-  return (
-    <>
-      <Select
-        options={options}
-        formatOptionLabel={formatOptionLabel}
-        onChange={internalSetSelectedSite}
-        value={selectedSite ? options.find((option) => option.value === selectedSite.slug) : null}
-      >
-
-      </Select>
-    </>
-  )
-}
-
-
-function DefaultInfoPanel({setSelectedSite, selectedSite, selectedSites=[], setSelectedSites, selectionLegendName='Selected Sites', setSelectionLegendName, regexPattern='', handleRegexChange, regexError}) {
-  return (
-    <div className="flex flex-col p-2 space-y-4">
-      {/* About NRP Section */}
-      <div>
-        <SectionHeader title="About NRP" className="mb-3" />
-        <a href="https://nationalresearchplatform.org" target="_blank" rel="noopener noreferrer" className="block">
-          <img src="/images/NRP_LOGO-cropped.png" alt="NRP Logo" className='object-scale-down h-12 block dark:hidden'/>
-          <img src="/images/NRP_LOGO-cropped-dark.png" alt="NRP Logo" className='object-scale-down h-12 hidden dark:block'/>
-        </a>
-        <p className='mt-2 text-sm text-gray-600 dark:text-gray-300 leading-relaxed'>
-          The National Research Platform is a partnership of more than 50 institutions,
-          led by researchers at UC San Diego, University of Nebraska-Lincoln, and Massachusetts
-          Green High Performance Computing Center and includes contributions by the National
-          Science Foundation, the Department of Energy, the Department of Defense, and many
-          research universities and R&amp;E networking organizations in the US and around the world.
-        </p>
-      </div>
-
-      {/* Select Site Section */}
-      <div>
-        <SectionHeader title="Select Site" className="mb-2" />
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1.5">Choose a site or click on the map</p>
-        <SiteSelectBox id="siteSelect" selectedSite={selectedSite} setSelectedSite={setSelectedSite}/>
-      </div>
-      
-      {/* Map Customization Section */}
-      <div>
-        <SectionHeader title="Map Customization" className="mb-2" />
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1.5">Select multiple sites to highlight</p>
-        <SiteMultiSelectBox 
-          id="multiSiteSelect" 
-          selectedSites={selectedSites} 
-          setSelectedSites={setSelectedSites}
-        />
-      </div>
-      
-      <div>
-        <label htmlFor="regexSelect"
-               className="text-sm text-gray-500 dark:text-gray-400 block mb-1.5">Or filter by regex pattern</label>
-        <input
-          id="regexSelect"
-          type="text"
-          value={regexPattern}
-          onChange={(e) => handleRegexChange && handleRegexChange(e.target.value)}
-          placeholder="e.g., chicago|boulder|^ucsd.*"
-          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg
-                   bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100
-                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                   transition-colors"
-        />
-        {regexError && (
-          <span className="text-xs text-red-500 dark:text-red-400 block mt-1">
-            {regexError}
-          </span>
-        )}
-        {regexPattern && !regexError && selectedSites.length > 0 && (
-          <span className="text-xs text-green-600 dark:text-green-400 block mt-1">
-            Selected {selectedSites.length} site{selectedSites.length !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-
-      {selectedSites.length > 0 && (
-        <div>
-          <label htmlFor="legendLabel"
-                 className="text-sm text-gray-500 dark:text-gray-400 block mb-1.5">Label for red pins (Legend)</label>
-          <input
-            id="legendLabel"
-            type="text"
-            value={selectionLegendName}
-            onChange={(e) => setSelectionLegendName && setSelectionLegendName(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                     transition-colors"
-          />
-        </div>
-      )}
-
-      {selectedSites.length > 0 && (
-        <button
-          onClick={() => {
-            if (setSelectedSites) setSelectedSites([]);
-            if (handleRegexChange) handleRegexChange('');
-          }}
-          className="w-full px-3 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
-        >
-          Clear Selection ({selectedSites.length})
-        </button>
-      )}
-    </div>
-  )
-}
-
-export default function MapInfoPanel({site, setSelectedSite, selectedSites=[], setSelectedSites, selectionLegendName='Selected Sites', setSelectionLegendName, regexPattern='', handleRegexChange, regexError, timeRange='24h'}) {
-  if (!site) {
-    return (
-      <>
-        <DefaultInfoPanel 
-          selectedSite={site} 
-          setSelectedSite={setSelectedSite}
-          selectedSites={selectedSites}
-          setSelectedSites={setSelectedSites}
-          selectionLegendName={selectionLegendName}
-          setSelectionLegendName={setSelectionLegendName}
-          regexPattern={regexPattern}
-          handleRegexChange={handleRegexChange}
-          regexError={regexError}
-        />
-      </>
-    );
-  }
-
-  // Calculate the number of gpus
-  let totalGpus = site.nodes.reduce((acc, node) => {
-    return acc + parseInt(node.gpus)
-  }, 0);
-  let totalCaches = site.nodes.reduce((acc, node) => {
-    if (node.cache)
-      return acc + 1;
-    else
-      return acc;
-  }, 0);
-  return (
-    <div className="p-2 space-y-4">
-      <div>
-        <SiteSelectBox selectedSite={site} setSelectedSite={setSelectedSite}/>
-      </div>
-      <div className='flex flex-row flex-wrap gap-2'>
-        <Badge icon={RiServerLine} color="green">{site.nodes.length} Nodes Online</Badge>
-        {totalGpus > 0 && <Badge icon={RiCpuLine} color="blue">{totalGpus} GPUs</Badge>}
-        {totalCaches > 0 && <Badge icon={RiDatabase2Line} color="violet">{totalCaches} OSDF Nodes</Badge>}
-      </div>
-      <div className="flex flex-col gap-4">
-        <SiteStats site={site} timeRange={timeRange}/>
-        {totalGpus > 0 ? <SiteGpuStats site={site} timeRange={timeRange}/> : null}
-        {totalGpus > 0 ? <SiteGpuTypes site={site}/> : null}
-        <SiteNetworkStats site={site} timeRange={timeRange}/>
-      </div>
-    </div>
-  )
-}
-
-/*
-<table className="w-full px-2 text-left text-gray-500 dark:text-gray-400 mt-2">
-        <thead className="text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b">
-          <tr>
-            <th scope="col">Node</th>
-          </tr>
-        </thead>
-        {site.nodes.map((hostname) => {
-          return (
-            <>
-              <tr className="even:bg-white even:dark:bg-gray-900 odd:bg-gray-50 odd:dark:bg-gray-800 border-b dark:border-gray-700">
-                <td>
-                  {hostname.name}
-                </td>
-              </tr>
-            </>
-          );
-        })
-        }
-      </table>
-      */
