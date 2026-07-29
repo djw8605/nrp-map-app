@@ -14,9 +14,13 @@ const VARIANTS = {
     fill: '#0284c7', // sky-600
     ring: 'rgba(2, 132, 199, 0.26)',
   },
+  osdfExclusive: {
+    fill: '#16a34a', // green-600
+    ring: 'rgba(22, 163, 74, 0.26)',
+  },
   selected: {
     fill: '#e11d48', // rose-600
-    ring: 'rgba(225, 29, 72, 0.28)',
+    ring: 'rgba(225, 29, 72, 0.8)',
   },
 };
 
@@ -41,13 +45,14 @@ const PIN_PATH = `M12 30 L3.44 17.23 A${HEAD_RADIUS} ${HEAD_RADIUS} 0 1 1 20.56 
  *   drops the pointer cursor and hover lift, and hides the pin from assistive
  *   tech since the adjacent text already names it.
  */
-export default function SitePinMarker({ isSelected, size = 26, title, interactive = true }) {
-  const variant = isSelected ? VARIANTS.selected : VARIANTS.site;
+export default function SitePinMarker({ isSelected, isOsdfExclusive = false, size = 26, title, interactive = true }) {
+  const variant = isSelected ? VARIANTS.selected : (isOsdfExclusive ? VARIANTS.osdfExclusive : VARIANTS.site);
 
   return (
     <div
       className={[
         'map-pin-marker',
+        isOsdfExclusive ? 'map-pin-marker--osdf-exclusive' : '',
         isSelected ? 'map-pin-marker--selected' : '',
         interactive ? '' : 'map-pin-marker--static',
       ]

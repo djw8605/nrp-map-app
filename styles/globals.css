@@ -425,6 +425,13 @@ thead {
   transform: none;
 }
 
+/* OSDF-exclusive pins sit above regular pins so they stay visible when
+ * coordinates are close to a regular NRP site (e.g. Internet2 Denver/Boise).
+ * Selected still wins because its rule comes later. */
+.map-pin-marker--osdf-exclusive {
+  z-index: 5;
+}
+
 .map-pin-marker--selected {
   z-index: 10;
   filter: drop-shadow(0 5px 9px rgba(15, 23, 42, 0.45));
