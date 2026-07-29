@@ -1,68 +1,61 @@
 'use client'
-import React, { useEffect, useRef, ReactElement, useState, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Map, {
-  Marker,
-  Popup,
   FullscreenControl,
   NavigationControl,
+  Marker,
 } from 'react-map-gl';
-import mapboxgl from 'mapbox-gl';
 import useSWR from 'swr';
 import { fetcher } from '../lib/fetcher';
 
 import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {faLocationDot, faExpand, faDatabase, faUpRightAndDownLeftFromCenter} from "@fortawesome/free-solid-svg-icons";
-import MapInfoPanel from "./mapInfoPanel";
+import {faUpRightAndDownLeftFromCenter} from "@fortawesome/free-solid-svg-icons";
 
-var siteIndex = 0;
-/*
-function MapMover() {
-  const map = useMap();
-  const dispatch = useDispatch()
-  useEffect(() => {
-    const interval = setInterval(() => {
-      map.setView([Sites.sites[siteIndex].lat, Sites.sites[siteIndex].log], 14, { animate: true });
-      dispatch(update(Sites.sites[siteIndex].name));
-      siteIndex = (siteIndex + 1) % Sites.sites.length;
-      console.log('This will run every second!');
+import SitePinMarker from './map/SitePinMarker';
+import { NRP_STANDARD_STYLE, OVERVIEW_CONFIG, resolveLightPreset } from './map/standardStyle';
+import { applyBasemapConfig, registerBuildingInteractions } from './map/useStandardBasemap';
 
-    }, 15000);
-    return () => clearInterval(interval);
-  }, []);
-  return null;
-}
-*/
+// Panel is 360px wide inset 12px from the right edge; reserve it plus a gutter.
+const PANEL_RESERVE_PX = 384;
+const COMPACT_RESERVE_PX = 56;
+// Matches MapOverlayPanel's compact threshold, so padding and layout agree.
+const PANEL_RESERVE_MIN_WIDTH = 640;
+const LEGEND_PIN_SIZE = 20;
 
-function SiteName() {
-  const site = useSelector((state) => state.siteDisplay.value);
-  return (
-    <h4>{site}</h4>
-  )
-
-}
-
-function SummaryStat({ title, value }) {
-  return (
-    <div className='bg-slate-100 p-1 flex items-center justify-center gap-2'>
-      <div className='flex flex-col gap-1 text-center'>
-        <div className='text-xl font-bold'>{value}</div>
-        <div className='text-sm'>{title}</div>
-      </div>
-    </div>
-  )
-}
-
-
-
-export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false, selectedSites=[], setSelectedSites, selectionLegendName='Selected Sites', regexPattern='', handleRegexChange}) {
+export default function NodeMap({
+  setSelectedSite,
+  selectedSite,
+  // Superseded by the overlay panel. Still accepted so an out-of-date external
+  // embed passing it cannot break.
+  usePopup = false,
+  selectedSites = [],
+  setSelectedSites,
+  selectionLegendName = 'Selected Sites',
+  regexPattern = '',
+  handleRegexChange,
+  mapRef: externalMapRef,
+  isSiteMode = false,
+  onEnterSite,
+  onExitOverview,
+  showExpandLink = true,
+  // Off when no panel is rendered (e.g. /map?panel=0) so the map stays centred.
+  reservePanelSpace = true,
+  children,
+}) {
   // Fetch nodes data from API
   const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
 
-  const uluru = { lat: 39.63517934689119, lng: -97.0739061397193 };
-
-  const mapRef = useRef(null);
+  const internalMapRef = useRef(null);
+  const mapRef = externalMapRef || internalMapRef;
+  const basemapReadyRef = useRef(false);
   const [zoom, setZoom] = useState(3);
+
+  // Read by the building-hover interaction without re-registering it on each change.
+  const isSiteModeRef = useRef(isSiteMode);
+  useEffect(() => {
+    isSiteModeRef.current = isSiteMode;
+  }, [isSiteMode]);
 
   // Helper to check if a site is selected
   const isSiteSelected = (node) => {
@@ -82,53 +75,93 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false,
     });
   };
 
-  // Build pins at top-level so hooks order is stable across renders
+  /*
+   * Reserve the panel's strip so `center` means "centred in the visible map",
+   * not "centred under the panel". Mapbox treats padding as part of the camera,
+   * so flyTo/easeTo inherit it and the drill-in lands centred too.
+   *
+   * Keyed off the container width for the same reason MapOverlayPanel is: in a
+   * narrow container the panel is a bottom sheet, not a right rail.
+   *
+   * Declared before onMapLoad, which lists it as a dependency.
+   */
+  const applyPanelPadding = useCallback((map, animate) => {
+    if (!map || !reservePanelSpace) return;
+    const width = map.getContainer()?.clientWidth || 0;
+    const padding = width >= PANEL_RESERVE_MIN_WIDTH
+      ? { top: 0, bottom: 0, left: 0, right: PANEL_RESERVE_PX }
+      : { top: 0, bottom: COMPACT_RESERVE_PX, left: 0, right: 0 };
+
+    if (animate) map.easeTo({ padding, duration: 300 });
+    else map.setPadding(padding);
+  }, [reservePanelSpace]);
+
+  /*
+   * Apply the basemap config and register building hover once per style load.
+   * react-map-gl 7.x has no `config` prop, so this has to go through the raw map.
+   */
+  const onMapLoad = useCallback((event) => {
+    const map = event.target;
+    if (basemapReadyRef.current) return;
+    basemapReadyRef.current = true;
+
+    applyBasemapConfig(map, { ...OVERVIEW_CONFIG, lightPreset: resolveLightPreset() });
+    registerBuildingInteractions(map, { enabled: () => isSiteModeRef.current });
+    applyPanelPadding(map, false);
+  }, [applyPanelPadding]);
+
+  useEffect(() => {
+    const map = mapRef.current?.getMap?.();
+    if (!map || !reservePanelSpace) return undefined;
+
+    const onResize = () => applyPanelPadding(map, true);
+    map.on('resize', onResize);
+    return () => map.off('resize', onResize);
+  }, [mapRef, reservePanelSpace, applyPanelPadding]);
+
+  /*
+   * Re-light the basemap when the theme changes, without rebuilding the style.
+   * Watches the `dark` class on <html> (Tailwind darkMode: 'class') rather than
+   * prefers-color-scheme, so it also fires for the in-app toggle.
+   */
+  useEffect(() => {
+    if (typeof MutationObserver === 'undefined') return undefined;
+
+    const observer = new MutationObserver(() => {
+      const map = mapRef.current?.getMap?.();
+      if (map) applyBasemapConfig(map, { lightPreset: resolveLightPreset() });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    return () => observer.disconnect();
+  }, [mapRef]);
+
+  const sites = useMemo(() => (Nodes ? Object.values(Nodes) : []), [Nodes]);
+
+  /*
+   * Every site gets its own pin — pins were briefly grouped into count bubbles,
+   * but that hid most of the map's sites, which is the thing the map is for.
+   *
+   * The zoom curve is what keeps dense regions workable instead: pins start small
+   * enough at world zoom that neighbours stay individually clickable, and reach
+   * full size by the time you have zoomed into a region.
+   */
   const pins = useMemo(() => {
-    if (!Nodes) return [];
-    const markers = [];
-    for (const [key, value] of Object.entries(Nodes)) {
-      markers.push(value);
-    }
+    if (sites.length === 0) return [];
 
-    const computedSize = Math.max(Math.min(9 * (zoom || 1), 30), 7);
+    // The head is 86% of the pin's box width, so the box runs a little larger
+    // than the old circle-plus-tail pin to land on the same visual weight.
+    const computedSize = Math.max(Math.min(6.5 * (zoom || 1), 34), 18);
+    const computedSelectedSize = Math.max(Math.min(6.5 * (zoom || 1) * 1.22, 40), 22);
 
-    return markers.map((node) => {
-      // Check if all the nodes in the site are cache nodes
-      let allCache = true;
-      for (let i = 0; i < node.nodes.length; i++) {
-        if (!node.nodes[i].cache) {
-          allCache = false;
-          break;
-        }
-      }
-
-      const computedSelectedSize = Math.max(Math.min(9 * (zoom || 1) * 1.3, 35), 9);
-      
-      // Determine colors based on node type
-      let pinColor = "text-sky-500"; // Default NRP blue
-      if (allCache) {
-        pinColor = "text-green-500"; // OSDF green
-      }
-      
-      // Check selection state - selected and multi-selected sites are red
+    return sites.map((node) => {
       const isSelected = node === selectedSite;
       const isMultiSelected = isSiteSelected(node);
-      
-      if (isSelected || isMultiSelected) {
-        pinColor = "text-red-500"; // Red for selected sites
-      }
-      
-      // Selection styling
-      let selectionClass = "";
-      let finalSize = computedSize;
-      if (isSelected || isMultiSelected) {
-        selectionClass = "drop-shadow-lg";
-        finalSize = computedSelectedSize;
-      }
-      const zIndex = (isSelected || isMultiSelected) ? "z-10" : "z-0";
-      const finalColor = `${pinColor} ${zIndex} ${selectionClass}`;
-      
-      const iconStyle = { width: `${finalSize}px`, height: `${finalSize}px` };
+      const highlighted = isSelected || isMultiSelected;
+      const finalSize = highlighted ? computedSelectedSize : computedSize;
 
       return (
         <Marker key={node.id}
@@ -142,18 +175,22 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false,
               toggleSiteSelection(node);
             } else {
               setSelectedSite(node);
+              if (onEnterSite) onEnterSite(node);
             }
           }}
         >
-          {allCache ?
-            <FontAwesomeIcon icon={faDatabase} style={iconStyle} className={`map-pin cursor-pointer ${finalColor}`} />
-            :
-            <FontAwesomeIcon icon={faLocationDot} style={iconStyle} className={`map-pin cursor-pointer ${finalColor}`} />
-          }
+          <SitePinMarker isSelected={highlighted} size={finalSize} title={node.name} />
         </Marker>
       );
     });
-  }, [Nodes, selectedSite, zoom, setSelectedSite, selectedSites]);
+  }, [sites, selectedSite, zoom, setSelectedSite, selectedSites, onEnterSite]);
+
+  // Marker clicks stop propagation, so anything reaching here is bare map.
+  const onMapClick = useCallback(() => {
+    setSelectedSite(null);
+    // Clicking bare map is one of the ways out of the drill-in.
+    if (isSiteMode && onExitOverview) onExitOverview();
+  }, [setSelectedSite, isSiteMode, onExitOverview]);
 
   // Return loading state if data is not yet available
   if (isLoading) {
@@ -180,81 +217,73 @@ export default function NodeMap( {setSelectedSite, selectedSite, usePopup=false,
   const initialViewState = {
     longitude: -97.0739061397193,
     latitude: 39.63517934689119,
-    zoom: 3
+    zoom: 3,
+    pitch: 0,
+    bearing: 0
   }
 
 
   // Create the legend
   const Legend = () => {
     return (
-      <div className="absolute bottom-4 right-1 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-        <ul className="list-none text-xs text-gray-900 dark:text-gray-100">
-          <li className="flex flex-row items-center gap-2 mb-2">
-            <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-sky-500"/>
+      // Bottom-LEFT: the overlay panel occupies the right edge. Swatches render the
+      // real SitePinMarker so the legend cannot drift from the pins on the map.
+      <div className="map-glass-panel absolute bottom-3 left-3 z-10 px-3 py-2.5">
+        <ul className="list-none space-y-2 text-xs text-slate-900 dark:text-slate-100">
+          <li className="flex flex-row items-center gap-2.5">
+            <SitePinMarker size={LEGEND_PIN_SIZE} interactive={false} />
             NRP Site
           </li>
-          <li className="flex flex-row items-center gap-2 mb-2">
-            <FontAwesomeIcon icon={faDatabase} size="2x" className="text-green-500"/>
-            OSDF-exclusive Site
-          </li>
           {selectedSites && selectedSites.length > 0 && (
-            <li className="flex flex-row items-center gap-2 border-t border-gray-300 dark:border-gray-600 pt-2 mt-2">
-              <FontAwesomeIcon icon={faLocationDot} size="2x" className="text-red-500"/>
+            <li className="flex flex-row items-center gap-2.5 border-t border-slate-300/60 pt-2 dark:border-slate-600/60">
+              <SitePinMarker isSelected size={LEGEND_PIN_SIZE} interactive={false} />
               {selectionLegendName}
             </li>
           )}
         </ul>
-
       </div>
     );
   };
 
-  //
-  // <MapMover />
   return (
     <>
-      <div className='w-full relative h-full'>
+      {/* `nrp-map` scopes the themed Mapbox control chrome in globals.css. */}
+      <div className='nrp-map w-full relative h-full'>
       <Map
           ref={mapRef}
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-          mapStyle="mapbox://styles/djw8605/cluhrtvp201az01pd8tomenyv"
+          mapStyle={NRP_STANDARD_STYLE}
           initialViewState={initialViewState}
-          onClick={(e) => {
-            setSelectedSite(null);
-          }}
+          onLoad={onMapLoad}
+          onClick={onMapClick}
           onMove={(e) => {
             setZoom(e.viewState?.zoom ?? zoom);
           }}
 
         >
           <FullscreenControl position="top-left" />
-          <NavigationControl position="top-left" />
+          <NavigationControl position="top-left" visualizePitch={true} />
+
           {pins}
 
-        { selectedSite && usePopup && (
-          <Popup
-            anchor="top"
-            longitude={Number(selectedSite.longitude)}
-            latitude={Number(selectedSite.latitude)}
-            onClose={() => setSelectedSite(null)}
-            >
-            <h3 className="text-sm">{selectedSite.name}</h3>
-          </Popup>
+        </Map>
+
+        {/* Overlay stack. The legend is noise once zoomed into a single site. */}
+        {!isSiteMode && <Legend />}
+
+        {showExpandLink && !isSiteMode && (
+          <Link
+            href="/map"
+            title="Open full-screen map"
+            aria-label="Open full-screen map"
+            className="map-glass-panel absolute top-3 right-3 z-10 flex items-center justify-center p-2 transition-colors"
+          >
+            <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+          </Link>
         )}
 
-
-        </Map>
-        <Legend />
-        <Link
-          href="/map"
-          title="Open full-screen map"
-          className="absolute top-3 right-3 z-10 bg-white dark:bg-gray-800 shadow rounded-md p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
-        >
-          <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} className="h-4 w-4 text-gray-700 dark:text-gray-200" />
-        </Link>
+        {children}
       </div>
     </>
   )
 }
-
-

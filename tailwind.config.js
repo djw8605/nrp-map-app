@@ -8,38 +8,51 @@ module.exports = {
     "./pages/**/*.{js,ts,jsx,tsx}",
     './node_modules/@tremor/**/*.{js,ts,jsx,tsx}'],
 
+  // Class-based so the in-app theme toggle can override the OS preference.
+  // pages/_document.js sets the class before first paint to avoid a flash.
+  darkMode: 'class',
+
   theme: {
     transparent: 'transparent',
     current: 'currentColor',
     extend: {
       colors: {
+        /*
+         * One neutral ramp: slate. The UI previously mixed slate (blue-tinted) and
+         * gray (neutral) utilities interchangeably, which read as subtly mismatched.
+         *
+         * `background.DEFAULT` is the CARD surface and is deliberately one step
+         * lighter (light mode) / lighter (dark mode) than the page background set
+         * in globals.css, so cards read as raised. They previously matched the page
+         * exactly — 1.00:1 contrast — and relied entirely on a border.
+         */
         // light mode
         tremor: {
           brand: {
             faint: colors.blue[50],
             muted: colors.blue[200],
             subtle: colors.blue[400],
-            DEFAULT: colors.blue[500],
+            DEFAULT: colors.blue[600],
             emphasis: colors.blue[700],
             inverted: colors.white,
           },
           background: {
-            muted: colors.gray[50],
-            subtle: colors.gray[100],
+            muted: colors.slate[50],
+            subtle: colors.slate[100],
             DEFAULT: colors.white,
-            emphasis: colors.gray[700],
+            emphasis: colors.slate[700],
           },
           border: {
-            DEFAULT: colors.gray[200],
+            DEFAULT: colors.slate[200],
           },
           ring: {
-            DEFAULT: colors.gray[200],
+            DEFAULT: colors.slate[200],
           },
           content: {
-            subtle: colors.gray[400],
-            DEFAULT: colors.gray[500],
-            emphasis: colors.gray[700],
-            strong: colors.gray[900],
+            subtle: colors.slate[400],
+            DEFAULT: colors.slate[500],
+            emphasis: colors.slate[700],
+            strong: colors.slate[900],
             inverted: colors.white,
           },
         },
@@ -54,23 +67,23 @@ module.exports = {
             inverted: colors.blue[950],
           },
           background: {
-            muted: '#131A2B',
-            subtle: colors.gray[800],
-            DEFAULT: colors.gray[900],
-            emphasis: colors.gray[300],
+            muted: colors.slate[950],
+            subtle: colors.slate[800],
+            DEFAULT: colors.slate[900],
+            emphasis: colors.slate[300],
           },
           border: {
-            DEFAULT: colors.gray[800],
+            DEFAULT: colors.slate[800],
           },
           ring: {
-            DEFAULT: colors.gray[800],
+            DEFAULT: colors.slate[800],
           },
           content: {
-            subtle: colors.gray[600],
-            DEFAULT: colors.gray[500],
-            emphasis: colors.gray[200],
-            strong: colors.gray[50],
-            inverted: colors.gray[950],
+            subtle: colors.slate[600],
+            DEFAULT: colors.slate[400],
+            emphasis: colors.slate[200],
+            strong: colors.slate[50],
+            inverted: colors.slate[950],
           },
         },
       },

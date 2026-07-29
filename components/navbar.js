@@ -1,25 +1,36 @@
-import {RiCpuLine, RiServerLine, RiDatabase2Line, RiBookOpenLine} from '@remixicon/react';
+import { RiBookOpenLine } from '@remixicon/react';
+import ThemeToggle from './themeToggle';
 
 export default function NavBar() {
   return (
-    <>
-      <nav className="px-2 sm:px-4 py-5 header-footer-color">
-        <div className="container mx-auto">
-          <div className="container flex flex-wrap justify-between items-center mx-auto">
-            <a href="/" className="flex items-center">
-              <span className="self-center text-xl font-semibold whitespace-nowrap text-white dark:text-gray-100">National Research Platform</span>
-            </a>
+    <header className="app-header sticky top-0 z-30">
+      <div className="container mx-auto px-2 sm:px-4">
+        <div className="flex h-16 flex-wrap items-center justify-between gap-3">
+          <a href="/" className="flex items-center gap-2.5">
+            {/* Brand blue as a small accent rather than a full-width slab. */}
+            <span className="h-5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-500" aria-hidden="true" />
+            <span className="whitespace-nowrap text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+              National Research Platform
+            </span>
+          </a>
+
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
             <a
               href="https://nationalresearchplatform.org/documentation"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-white text-blue-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 font-bold py-2 px-4 rounded shadow-md flex items-center"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold
+                text-white transition-colors hover:bg-blue-700
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
+                dark:bg-blue-500 dark:hover:bg-blue-400 dark:focus-visible:ring-offset-slate-900"
             >
-              <RiBookOpenLine className="mr-2" /> Docs
+              <RiBookOpenLine className="h-4 w-4" aria-hidden="true" />
+              Docs
             </a>
           </div>
         </div>
-      </nav>
-    </>
+      </div>
+    </header>
   );
 }

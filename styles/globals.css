@@ -2,33 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Add dark mode support for body and backgrounds */
+/*
+ * The page is the RECESSED surface and cards are raised above it. Previously both
+ * were the same colour (white on white, slate-900 on slate-900), so cards had no
+ * surface of their own and depended entirely on a hairline border.
+ */
 body {
-  @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+  @apply bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
 }
 
-/* Example for section backgrounds */
+/* Sections are transparent so the page surface shows through behind cards. */
 section {
-  @apply bg-white dark:bg-gray-900;
+  @apply bg-transparent;
 }
 
-/* Example for card backgrounds */
 .card {
-  @apply bg-white dark:bg-gray-800;
+  @apply bg-white dark:bg-slate-900;
 }
 
-/* Example for table headers */
 thead {
-  @apply bg-blue-900 text-white dark:bg-gray-800 dark:text-gray-100;
+  @apply bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100;
 }
 
 /* Utility for border color in dark mode */
 .border {
-  @apply border-gray-200 dark:border-gray-700;
+  @apply border-slate-200 dark:border-slate-800;
 }
 
-.header-footer-color {
-    @apply bg-blue-900 text-white;
+/*
+ * Chrome for the page header and footer. Replaces the old `header-footer-color`
+ * (a flat bg-blue-900 with no dark variant, which sat at 1.71:1 against the dark
+ * page and was the only saturated element in an otherwise neutral UI). Brand blue
+ * now appears as an accent, not a slab.
+ */
+.app-header {
+  @apply border-b border-slate-200 bg-white/85 dark:border-slate-800 dark:bg-slate-900/85;
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+}
+
+.app-footer {
+  @apply border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900;
 }
 
 .osdf-footer-color {
@@ -133,14 +147,10 @@ thead {
   padding: 0 8px; /* ensure some spacing from inner ring */
 }
 
-/* Dark mode variation for loader text */
+/* Dark mode variation for loader text. Class-based to follow the theme toggle
+   rather than the OS preference. */
 .dark .concentric-loader .loader-text {
-  color: rgba(243,244,246,1); /* gray-100 */
-}
-@media (prefers-color-scheme: dark) {
-  .concentric-loader .loader-text {
-    color: rgba(243,244,246,1); /* gray-100 */
-  }
+  color: rgba(241,245,249,1); /* slate-100 */
 }
 
 /* OSDF map popup dark theme + micro animation */
@@ -270,6 +280,154 @@ thead {
   border-radius: 50%;
   animation: osdf-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   pointer-events: none;
+}
+
+/* Floating glass panel over the map canvas */
+.map-glass-panel {
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 1rem;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  /* Prefixed first, standard last: the CSS minifier dedupes these two into one
+     declaration and keeps the later, so the standard property has to win.
+     Safari below 18 only understands the prefixed form. */
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  animation: osdfPopupIn 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.map-glass-panel__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.7);
+  color: rgba(51, 65, 85, 1);
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.map-glass-panel__btn:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(15, 23, 42, 0.22);
+  color: rgba(15, 23, 42, 1);
+}
+
+/* Class-scoped (not a media query) so the glass panels follow the theme toggle. */
+.dark .map-glass-panel {
+  background: rgba(15, 23, 42, 0.78);
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.55), 0 0 0 1px rgba(148, 163, 184, 0.08);
+}
+
+.dark .map-glass-panel__btn {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(30, 41, 59, 0.85);
+  color: rgba(203, 213, 225, 1);
+}
+
+.dark .map-glass-panel__btn:hover {
+  background: rgba(51, 65, 85, 0.95);
+  border-color: rgba(148, 163, 184, 0.45);
+  color: rgba(248, 250, 252, 1);
+}
+
+/*
+ * Map chrome (zoom / fullscreen) restyled to match the glass panels. Default
+ * Mapbox controls are opaque white, which put three different surface treatments
+ * on one map: white controls, white legend, translucent panel.
+ */
+.nrp-map .mapboxgl-ctrl-group {
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+.nrp-map .mapboxgl-ctrl-group button {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+}
+
+.nrp-map .mapboxgl-ctrl-group button + button {
+  border-top: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.nrp-map .mapboxgl-ctrl-group button:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.dark .nrp-map .mapboxgl-ctrl-group {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.78);
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.5);
+}
+
+.dark .nrp-map .mapboxgl-ctrl-group button + button {
+  border-top-color: rgba(148, 163, 184, 0.22);
+}
+
+.dark .nrp-map .mapboxgl-ctrl-group button:hover {
+  background: rgba(51, 65, 85, 0.8);
+}
+
+/* Control glyphs are dark PNGs; invert them for the dark surface. */
+.dark .nrp-map .mapboxgl-ctrl-icon {
+  filter: brightness(0) invert(1) opacity(0.86);
+}
+
+/* Attribution / logo also default to an opaque white pill. */
+.dark .nrp-map .mapboxgl-ctrl-attrib {
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.dark .nrp-map .mapboxgl-ctrl-attrib a {
+  color: rgba(203, 213, 225, 1);
+}
+
+/*
+ * Site pin. The shape itself is one SVG path (components/map/SitePinMarker.js);
+ * this only handles sizing, the ground shadow and the hover lift.
+ */
+.map-pin-marker {
+  --pin-size: 26px;
+  width: var(--pin-size);
+  /* 30/24, the pin's viewBox aspect, so the tip lands on the anchor point. */
+  height: calc(var(--pin-size) * 1.25);
+  cursor: pointer;
+  filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.35));
+  transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.map-pin-marker:hover {
+  transform: translateY(-2px) scale(1.06);
+}
+
+.map-pin-marker__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The white outline and the selected halo intentionally spill past the box. */
+  overflow: visible;
+}
+
+/* Legend swatches and dropdown rows: same pin, but not a control. */
+.map-pin-marker--static,
+.map-pin-marker--static:hover {
+  cursor: default;
+  transform: none;
+}
+
+.map-pin-marker--selected {
+  z-index: 10;
+  filter: drop-shadow(0 5px 9px rgba(15, 23, 42, 0.45));
 }
 
 /* Slight visual distinction for KPI trend fills */

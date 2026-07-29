@@ -11,7 +11,7 @@ function numberWithCommas(x) {
 
 function ExpandedRow({ data }) {
   return (
-    <div className='p-2 flex flex-col text-xs bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'>
+    <div className='p-2 flex flex-col text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100'>
       <div>
         <span className='font-bold'>Namespace:</span> {data.Name}
       </div>
@@ -31,10 +31,10 @@ function ExpandedRow({ data }) {
 function DataTableLoading() {
   return (
     <>
-      <div className='flex justify-center items-center flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'>
+      <div className='flex justify-center items-center flex-col bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100'>
         <div role="status" className='mt-3 flex flex-row items-center'>
           <div>
-            <p className='text-sm font-medium text-gray-900 dark:text-white'>Loading Usage Information...</p>
+            <p className='text-sm font-medium text-slate-900 dark:text-white'>Loading Usage Information...</p>
           </div>
           <div className='ml-2'>
             <div className="spinner-border spinner-border-sm" role="status">
@@ -43,7 +43,7 @@ function DataTableLoading() {
           <span className="sr-only">Loading...</span>
         </div>
         <div className='mt-3'>
-          <p className='text-sm font-medium text-gray-900 dark:text-white'>This could take a bit...</p>
+          <p className='text-sm font-medium text-slate-900 dark:text-white'>This could take a bit...</p>
         </div>
       </div>
     </>
@@ -179,7 +179,7 @@ function NamespaceDescription({ namespace }) {
   }
   return (
     <>
-      <div className="border border-gray-400 m-4 rounded p-4 mt-6">
+      <div className="border border-slate-400 m-4 rounded p-4 mt-6">
         <div className="text-2xl">
           <span className="font-bold">Namespace:</span> {namespace.Name}
         </div>

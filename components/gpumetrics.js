@@ -80,7 +80,7 @@ function CustomChart({ item, data }) {
   return (
     <Card className="rounded-xl shadow-sm p-5 flex flex-col justify-between min-h-[210px]">
       <div>
-        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           {item.name}
         </dt>
         <dd className="mt-1.5 flex items-baseline gap-2">
@@ -95,7 +95,7 @@ function CustomChart({ item, data }) {
         </dd>
       </div>
       <div>
-        <span className="text-xs text-gray-400 dark:text-gray-500">
+        <span className="text-xs text-slate-400 dark:text-slate-500">
           {payload ? payload?.payload?.humanDate : data[data.length - 1].humanDate}
         </span>
         <AreaChart
@@ -121,7 +121,7 @@ function CustomChart({ item, data }) {
 function ErrorCard({ title, message }) {
   return (
     <Card className="rounded-xl shadow-sm p-5 min-h-[210px]">
-      <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
         {title}
       </dt>
       <dd className="mt-2 text-sm text-red-600 dark:text-red-400">
@@ -132,9 +132,13 @@ function ErrorCard({ title, message }) {
 }
 
 
-export function ClusterMetrics({ timeRange = '24h', onLastUpdated }) {
+// Fixed metrics window; the global 24h/7d/30d selector was removed and 24h is
+// what this chart was already rendering.
+const METRICS_RANGE = '24h';
 
-  const { data, error, mutate } = useSWR(`/api/prommetrics?query=clustermetrics&range=${timeRange}`, fetcher, {
+export function ClusterMetrics({ onLastUpdated }) {
+
+  const { data, error, mutate } = useSWR(`/api/prommetrics?query=clustermetrics&range=${METRICS_RANGE}`, fetcher, {
     refreshInterval: 3600000,
     onSuccess: () => {
       if (onLastUpdated) {
