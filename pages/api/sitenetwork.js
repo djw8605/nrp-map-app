@@ -1,5 +1,6 @@
 import { PrometheusDriver } from 'prometheus-query';
 import { getNodesDataFromR2 } from "../../lib/nodesUtils";
+import { buildInstanceMatcher, dedupedNodeRate } from "../../lib/networkQuery";
 
 const prom = new PrometheusDriver({
   endpoint: "https://thanos.nrp-nautilus.io/",
@@ -40,11 +41,11 @@ export default async function handler(req, res) {
       return res.status(404).send('Site not found');
     }
 
-    // Combine all node names into a regex
-    var nodeRegex = nodes.reduce((acc, val) => acc + "|" + val.name, "").substring(1);
-    //console.log(nodeRegex);
-    var transmitQuery = `sum(rate(node_network_transmit_bytes_total{instance=~"${nodeRegex}", device=~"en.*|et.*"}[5m]))`
-    var receiveQuery = `sum(rate(node_network_receive_bytes_total{instance=~"${nodeRegex}", device=~"en.*|et.*"}[5m]))`
+    // Match every node at the site, on physical NICs only, with duplicate
+    // series for the same node+device collapsed before summing.
+    const filter = buildInstanceMatcher(nodes.map((node) => node.name));
+    var transmitQuery = `sum(${dedupedNodeRate('node_network_transmit_bytes_total', filter)})`
+    var receiveQuery = `sum(${dedupedNodeRate('node_network_receive_bytes_total', filter)})`
 
     // Start date is now - configured range
     let startDate = new Date();
@@ -60,19 +61,12 @@ export default async function handler(req, res) {
     console.log("Network results");
     console.log(results[0].result[0].values);
     */
-    var transmit = []
-    for (var i = 0; i < results[0].result[0].values.length; i++) {
-      transmit.push({'time': results[0].result[0].values[i].time, 'value': results[0].result[0].values[i].value});
-    }
-    var receive = []
-    for (var i = 0; i < results[1].result[0].values.length; i++) {
-      receive.push({'time': results[1].result[0].values[i].time, 'value': results[1].result[0].values[i].value});
-    }
+    // A site with no reporting node-exporter returns no series at all.
+    const seriesValues = (result) => (result?.result?.[0]?.values || [])
+      .map((point) => ({ 'time': point.time, 'value': point.value }));
 
-    console.log("Network Trasnmit:");
-    console.log(transmit);
-    console.log("Network Receive:");
-    console.log(receive);
+    var transmit = seriesValues(results[0]);
+    var receive = seriesValues(results[1]);
 
     res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate')
     res.setHeader('Content-Type', 'application/json');

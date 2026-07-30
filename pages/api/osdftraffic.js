@@ -1,5 +1,6 @@
 import { PrometheusDriver } from 'prometheus-query';
 import { getNodesDataFromR2 } from '../../lib/nodesUtils';
+import { buildInstanceMatcher, dedupedNodeRate } from '../../lib/networkQuery';
 
 const prom = new PrometheusDriver({
   endpoint: 'https://prometheus.nrp-nautilus.io/',
@@ -57,62 +58,43 @@ function parseRequestedNodeIds(nodeIdsQuery) {
   return Array.from(unique);
 }
 
-function escapeRegex(value) {
-  // PromQL string literals require escaped backslashes (e.g. "\\.") so the
-  // regex engine receives the intended literal metacharacter escape ("\.")
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&');
-}
+function buildTrafficQuery(nodeIds) {
+  const filter = buildInstanceMatcher(nodeIds);
 
-function buildTrafficQuery(nodeRegex) {
-  const filter = `{instance=~"(${nodeRegex})(:[0-9]+)?",device=~"en.*|et.*"}`;
+  // One deduplicated per-node/per-device base expression per direction; the
+  // per-node and aggregate scopes are both derived from it so the aggregate can
+  // never drift from the sum of the per-node values.
+  const upload = dedupedNodeRate('node_network_transmit_bytes_total', filter);
+  const download = dedupedNodeRate('node_network_receive_bytes_total', filter);
 
-  const perNodeUpload = `
+  const perNode = (base, direction) => `
     label_replace(
       label_replace(
-        label_replace(
-          sum by (instance) (rate(node_network_transmit_bytes_total${filter}[5m])),
-          "nodeId", "$1", "instance", "([^:]+)(:[0-9]+)?"
-        ),
-        "direction", "upload", "__name__", ".*"
+        sum by (nodeId) (${base}),
+        "direction", "${direction}", "__name__", ".*"
       ),
       "scope", "perNode", "__name__", ".*"
     )
   `;
 
-  const perNodeDownload = `
+  const aggregate = (base, direction) => `
     label_replace(
       label_replace(
-        label_replace(
-          sum by (instance) (rate(node_network_receive_bytes_total${filter}[5m])),
-          "nodeId", "$1", "instance", "([^:]+)(:[0-9]+)?"
-        ),
-        "direction", "download", "__name__", ".*"
-      ),
-      "scope", "perNode", "__name__", ".*"
-    )
-  `;
-
-  const aggregateUpload = `
-    label_replace(
-      label_replace(
-        sum(rate(node_network_transmit_bytes_total${filter}[5m])),
-        "direction", "upload", "__name__", ".*"
+        sum(${base}),
+        "direction", "${direction}", "__name__", ".*"
       ),
       "scope", "aggregate", "__name__", ".*"
     )
   `;
 
-  const aggregateDownload = `
-    label_replace(
-      label_replace(
-        sum(rate(node_network_receive_bytes_total${filter}[5m])),
-        "direction", "download", "__name__", ".*"
-      ),
-      "scope", "aggregate", "__name__", ".*"
-    )
-  `;
-
-  return `(${perNodeUpload}) or (${perNodeDownload}) or (${aggregateUpload}) or (${aggregateDownload})`;
+  return [
+    perNode(upload, 'upload'),
+    perNode(download, 'download'),
+    aggregate(upload, 'upload'),
+    aggregate(download, 'download'),
+  ]
+    .map((expression) => `(${expression})`)
+    .join(' or ');
 }
 
 function parseSeriesValues(values) {
@@ -179,8 +161,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    const nodeRegex = osdfNodeIds.map(escapeRegex).join('|');
-    const query = buildTrafficQuery(nodeRegex);
+    const query = buildTrafficQuery(osdfNodeIds);
     const end = new Date();
     const start = new Date(end.getTime() - windowMinutes * 60 * 1000);
     const queryResult = await prom.rangeQuery(query, start, end, STEP_SECONDS);
