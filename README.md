@@ -21,6 +21,23 @@ npm install
 npm run dev
 ```
 
+### Merging nearby sites (preview)
+
+Several institutions register more than one Netbox site inside one campus or one
+carrier hotel, so at overview zoom their pins draw on top of each other and only
+the last one painted is clickable. `lib/siteClusters.js` merges sites within a
+radius into a single pin that carries a count, while keeping every member site
+intact so the overlay panel and the hover card can still name them, count their
+nodes and GPUs separately, and fetch each one's live metrics.
+
+It is opt-in: `NodeMap` takes a `clusterRadiusKm` prop that defaults to `0`
+(no merging), so `/` and `/map` are unaffected until they pass a radius.
+
+Review it at **`/cluster-test`** — a harness with a radius slider, live or fixture
+sites, the panel and hover card rendered outside the map (so they can be judged
+without a Mapbox token), and the assertions from `lib/siteClusters.checks.js`
+running in the page.
+
 ### CORS
 
 The API route `/api/nodes` enables permissive CORS to allow access from any origin. This supports external sites embedding or fetching node data directly. Preflight `OPTIONS` requests are handled and the following headers are returned on requests to this route:

@@ -427,12 +427,53 @@ thead {
  */
 .map-pin-marker {
   --pin-size: 26px;
+  position: relative;
   width: var(--pin-size);
   /* 30/24, the pin's viewBox aspect, so the tip lands on the anchor point. */
   height: calc(var(--pin-size) * 1.25);
   cursor: pointer;
   filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.35));
   transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/*
+ * Count badge on a pin standing for several merged sites.
+ *
+ * Neutral slate rather than a fourth pin colour: the pin body already encodes
+ * NRP / OSDF / selected, and a coloured badge on top of a coloured head reads as
+ * a new category instead of a count. The white ring is what keeps it legible on
+ * all three fills.
+ *
+ * Sized off --pin-size so it stays proportional as the zoom curve grows the pin,
+ * with a floor: at world zoom the pin is 18px and a proportional badge would be
+ * 8px of unreadable digits, which defeats the point of showing the number.
+ */
+.map-pin-marker__count {
+  position: absolute;
+  top: -2px;
+  right: calc(var(--pin-size) * -0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: max(15px, calc(var(--pin-size) * 0.46));
+  min-width: max(15px, calc(var(--pin-size) * 0.46));
+  padding: 0 3px;
+  border: 1.5px solid #ffffff;
+  border-radius: 9999px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: max(9.5px, calc(var(--pin-size) * 0.28));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.dark .map-pin-marker__count {
+  border-color: rgba(15, 23, 42, 0.85);
+  background: #f8fafc;
+  color: #0f172a;
 }
 
 .map-pin-marker:hover {
@@ -459,6 +500,12 @@ thead {
  * Selected still wins because its rule comes later. */
 .map-pin-marker--osdf-cache {
   z-index: 5;
+}
+
+/* A merged pin hides sites behind it, so it must never be the one that loses an
+ * overlap fight with a neighbouring single pin. */
+.map-pin-marker--merged {
+  z-index: 7;
 }
 
 .map-pin-marker--selected {

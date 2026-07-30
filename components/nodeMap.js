@@ -17,6 +17,7 @@ import SitePinMarker from './map/SitePinMarker';
 import SiteHoverCard from './map/SiteHoverCard';
 import { NRP_STANDARD_STYLE, OVERVIEW_CONFIG, resolveLightPreset } from './map/standardStyle';
 import { applyBasemapConfig, registerBuildingInteractions } from './map/useStandardBasemap';
+import { clusterSites, groupContainsAnySite, siteHasOsdfCache } from '../lib/siteClusters';
 
 // Panel is 360px wide inset 12px from the right edge; reserve it plus a gutter.
 const PANEL_RESERVE_PX = 384;
@@ -33,7 +34,7 @@ const LEGEND_PIN_SIZE = 20;
  * panel's entrance animation. NodeMap re-renders on every zoom tick and every pin
  * hover, so nested here the legend visibly flickered each time.
  */
-const Legend = ({ selectedSites, selectionLegendName }) => (
+const Legend = ({ selectedSites, selectionLegendName, mergeRadiusKm = 0, hasMergedPins = false }) => (
   // Bottom-LEFT: the overlay panel occupies the right edge. Swatches render the
   // real SitePinMarker so the legend cannot drift from the pins on the map.
   <div className="map-glass-panel absolute bottom-3 left-3 z-10 px-3 py-2.5">
@@ -46,6 +47,14 @@ const Legend = ({ selectedSites, selectionLegendName }) => (
         <SitePinMarker isOsdfCache size={LEGEND_PIN_SIZE} interactive={false} />
         OSDF Cache Site
       </li>
+      {/* Only shown when something actually merged, so the legend does not explain
+          a badge that is nowhere on screen. */}
+      {hasMergedPins && (
+        <li className="flex flex-row items-center gap-2.5">
+          <SitePinMarker size={LEGEND_PIN_SIZE} count={2} interactive={false} />
+          Sites within {mergeRadiusKm} km
+        </li>
+      )}
       {selectedSites && selectedSites.length > 0 && (
         <li className="flex flex-row items-center gap-2.5 border-t border-slate-300/60 pt-2 dark:border-slate-600/60">
           <SitePinMarker isSelected size={LEGEND_PIN_SIZE} interactive={false} />
@@ -84,10 +93,22 @@ export default function NodeMap({
   showExpandLink = true,
   // Off when no panel is rendered (e.g. /map?panel=0) so the map stays centred.
   reservePanelSpace = true,
+  /*
+   * Merge sites closer together than this into one pin (see lib/siteClusters).
+   * 0 disables it, which is the default: the live pages opt in rather than the
+   * behaviour changing under them. See /cluster-test for the preview harness.
+   */
+  clusterRadiusKm = 0,
+  // Render these sites instead of fetching /api/nodes. For the preview harness,
+  // which needs to show fixture geometry the live payload does not contain.
+  sites: sitesOverride,
   children,
 }) {
-  // Fetch nodes data from API
-  const { data: Nodes, error, isLoading } = useSWR('/api/nodes', fetcher);
+  // Fetch nodes data from API. Skipped entirely when the caller supplies sites.
+  const { data: Nodes, error, isLoading } = useSWR(
+    sitesOverride ? null : '/api/nodes',
+    fetcher,
+  );
 
   const internalMapRef = useRef(null);
   const mapRef = externalMapRef || internalMapRef;
@@ -110,27 +131,35 @@ export default function NodeMap({
     if (isSiteMode) setHoveredSite(null);
   }, [isSiteMode]);
 
-  // Helper to check if a site is selected
-  const isSiteSelected = (node) => {
-    return selectedSites && selectedSites.some(s => s.id === node.id);
+  /*
+   * Selection state is tracked in terms of *sites*, while the map draws *groups*
+   * (one group per pin, one or more sites per group — see lib/siteClusters). The
+   * three helpers below are the whole translation layer between the two, so
+   * `selectedSite`/`selectedSites` keep holding real sites for every consumer
+   * outside this file: the regex filter, the pickers, the legend count.
+   */
+
+  // A pin is highlighted when the group itself is selected, or any site inside it
+  // is — a member picked from the panel's dropdown must light up its merged pin.
+  const isGroupSelected = (group) => {
+    if (!selectedSite) return false;
+    if (String(group.id) === String(selectedSite.id)) return true;
+    return group.members.some((member) => String(member.id) === String(selectedSite.id));
   };
 
-  // Helper to check if a site has any OSDF cache node
-  const hasOsdfCache = (node) => {
-    if (!node.nodes || node.nodes.length === 0) return false;
-    return node.nodes.some(n => n.cache === true);
-  };
+  const isSiteSelected = (group) => groupContainsAnySite(group, selectedSites);
 
-  // Helper to toggle site selection
-  const toggleSiteSelection = (node) => {
+  // Ctrl/Cmd-click on a merged pin is all-or-nothing across its members: a pin
+  // that is half selected has no way to draw itself.
+  const toggleSiteSelection = (group) => {
     if (!setSelectedSites) return;
-    setSelectedSites(prev => {
-      const isSelected = prev.some(s => s.id === node.id);
-      if (isSelected) {
-        return prev.filter(s => s.id !== node.id);
-      } else {
-        return [...prev, node];
+    setSelectedSites((prev) => {
+      const memberIds = new Set(group.members.map((member) => String(member.id)));
+      const alreadySelected = prev.some((site) => memberIds.has(String(site.id)));
+      if (alreadySelected) {
+        return prev.filter((site) => !memberIds.has(String(site.id)));
       }
+      return [...prev, ...group.members];
     });
   };
 
@@ -198,18 +227,42 @@ export default function NodeMap({
     return () => observer.disconnect();
   }, [mapRef]);
 
-  const sites = useMemo(() => (Nodes ? Object.values(Nodes) : []), [Nodes]);
+  const sites = useMemo(
+    () => (sitesOverride ? sitesOverride : Nodes ? Object.values(Nodes) : []),
+    [sitesOverride, Nodes],
+  );
 
   /*
-   * Every site gets its own pin — pins were briefly grouped into count bubbles,
-   * but that hid most of the map's sites, which is the thing the map is for.
+   * One pin per *group*. With clusterRadiusKm at 0 a group is exactly one site, so
+   * this is the previous behaviour verbatim; above 0, sites within that many
+   * kilometres share a pin that carries their count.
    *
-   * The zoom curve is what keeps dense regions workable instead: pins start small
-   * enough at world zoom that neighbours stay individually clickable, and reach
-   * full size by the time you have zoomed into a region.
+   * Memoised on the data and the radius alone — not on selection or zoom — so the
+   * group objects (and therefore the pin keys) survive hovering, selecting and
+   * zooming. Rebuilding them per render would replay every pin's entrance.
+   */
+  const groups = useMemo(
+    () => clusterSites(sites, { radiusKm: clusterRadiusKm }),
+    [sites, clusterRadiusKm],
+  );
+
+  const hasMergedPins = useMemo(
+    () => groups.some((group) => group.memberCount > 1),
+    [groups],
+  );
+
+  /*
+   * Every group gets its own pin — pins were briefly grouped into count bubbles by
+   * region, but that hid most of the map's sites, which is the thing the map is
+   * for. Merging strictly by distance is the narrow version of that idea: it only
+   * ever folds together pins that were already drawing on top of each other.
+   *
+   * The zoom curve is what keeps dense regions workable beyond that: pins start
+   * small enough at world zoom that neighbours stay individually clickable, and
+   * reach full size by the time you have zoomed into a region.
    */
   const pins = useMemo(() => {
-    if (sites.length === 0) return [];
+    if (groups.length === 0) return [];
 
     // The head is 86% of the pin's box width, so the box runs a little larger
     // than the old circle-plus-tail pin to land on the same visual weight.
@@ -219,23 +272,23 @@ export default function NodeMap({
     // Render OSDF cache pins last so they stack on top of nearby regular
     // NRP pins (e.g. Internet2 Denver / Boise pairs are registered separately
     // but at almost the same coordinates).
-    const sortedSites = [...sites].sort((a, b) => {
-      const aOsdf = hasOsdfCache(a) ? 1 : 0;
-      const bOsdf = hasOsdfCache(b) ? 1 : 0;
+    const sortedGroups = [...groups].sort((a, b) => {
+      const aOsdf = siteHasOsdfCache(a) ? 1 : 0;
+      const bOsdf = siteHasOsdfCache(b) ? 1 : 0;
       return aOsdf - bOsdf;
     });
 
-    return sortedSites.map((node) => {
-      const isSelected = node === selectedSite;
-      const isMultiSelected = isSiteSelected(node);
-      const highlighted = isSelected || isMultiSelected;
+    return sortedGroups.map((group) => {
+      const highlighted = isGroupSelected(group) || isSiteSelected(group);
       const finalSize = highlighted ? computedSelectedSize : computedSize;
-      const osdfCache = hasOsdfCache(node);
+      const osdfCache = siteHasOsdfCache(group);
+      const label =
+        group.memberCount > 1 ? `${group.name} — ${group.memberCount} sites` : group.name;
 
       return (
-        <Marker key={node.id}
-          longitude={node.longitude}
-          latitude={node.latitude}
+        <Marker key={group.id}
+          longitude={group.longitude}
+          latitude={group.latitude}
           anchor="bottom"
           onClick={(e) => {
             e.originalEvent.stopPropagation();
@@ -244,25 +297,26 @@ export default function NodeMap({
             setHoveredSite(null);
             // Ctrl/Cmd + Click for multi-select, regular click for single select
             if (e.originalEvent.ctrlKey || e.originalEvent.metaKey) {
-              toggleSiteSelection(node);
+              toggleSiteSelection(group);
             } else {
-              setSelectedSite(node);
-              if (onEnterSite) onEnterSite(node);
+              setSelectedSite(group);
+              if (onEnterSite) onEnterSite(group);
             }
           }}
         >
           <SitePinMarker
             isSelected={highlighted}
             isOsdfCache={osdfCache}
+            count={group.memberCount}
             size={finalSize}
-            title={node.name}
-            onMouseEnter={() => setHoveredSite(node)}
+            title={label}
+            onMouseEnter={() => setHoveredSite(group)}
             onMouseLeave={() => setHoveredSite(null)}
           />
         </Marker>
       );
     });
-  }, [sites, selectedSite, zoom, setSelectedSite, selectedSites, onEnterSite]);
+  }, [groups, selectedSite, zoom, setSelectedSite, selectedSites, setSelectedSites, onEnterSite]);
 
   // Marker clicks stop propagation, so anything reaching here is bare map.
   const onMapClick = useCallback(() => {
@@ -273,7 +327,7 @@ export default function NodeMap({
   }, [setSelectedSite, isSiteMode, onExitOverview]);
 
   // Return loading state if data is not yet available
-  if (isLoading) {
+  if (!sitesOverride && isLoading) {
     return (
       <div className="loader-wrapper h-full">
         <div className="concentric-loader" aria-hidden="true">
@@ -286,11 +340,11 @@ export default function NodeMap({
     );
   }
 
-  if (error) {
+  if (!sitesOverride && error) {
     return <div className="flex items-center justify-center h-full">Error loading map data</div>;
   }
 
-  if (!Nodes) {
+  if (sites.length === 0) {
     return <div className="flex items-center justify-center h-full">No data available</div>;
   }
 
@@ -304,11 +358,15 @@ export default function NodeMap({
 
 
   /*
-   * No hover card while drilled into a site, and none for the site that is
+   * No hover card while drilled into a site, and none for the pin that is
    * already open — the overlay panel is showing all of this and more.
+   *
+   * Compared by id rather than by reference: `selectedSite` can be a member site
+   * chosen from the panel's picker while `hoveredSite` is the merged group drawing
+   * that member's pin, and those are two different objects for one pin.
    */
   const hoverCardSite =
-    hoveredSite && !isSiteMode && hoveredSite !== selectedSite ? hoveredSite : null;
+    hoveredSite && !isSiteMode && !isGroupSelected(hoveredSite) ? hoveredSite : null;
 
   // Lift the card clear of the pin it describes, at whatever size this zoom draws it.
   const hoveredPinHeight =
@@ -366,7 +424,12 @@ export default function NodeMap({
 
         {/* Overlay stack. The legend is noise once zoomed into a single site. */}
         {!isSiteMode && (
-          <Legend selectedSites={selectedSites} selectionLegendName={selectionLegendName} />
+          <Legend
+            selectedSites={selectedSites}
+            selectionLegendName={selectionLegendName}
+            mergeRadiusKm={clusterRadiusKm}
+            hasMergedPins={hasMergedPins}
+          />
         )}
 
         {showExpandLink && !isSiteMode && (
