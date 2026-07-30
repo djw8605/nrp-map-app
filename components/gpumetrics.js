@@ -18,12 +18,15 @@ const percentageFormatter = (number) => {
 
 
 const categories = [
-  { name: 'GPUs Allocated',
+  // Accounting data is daily, so this is GPU-hours over the day divided by 24 —
+  // the average number of GPUs held across the day, not a point-in-time count.
+  { name: 'Average GPUs Allocated',
     chartCategory: 'gpus',
-    valueFormatter: numberFormatter,
+    valueFormatter: (number) => numberFormatter(Math.round(number)),
     color: 'emerald'
   },
-  { name: 'Running Jupyter Pods',
+  // Distinct jupyter-* pods seen during the day, not a count of pods up right now.
+  { name: 'Jupyter Pods per Day',
     chartCategory: 'jupyter_pods',
     valueFormatter: numberFormatter,
     color: 'blue'
@@ -132,9 +135,12 @@ function ErrorCard({ title, message }) {
 }
 
 
-// Fixed metrics window; the global 24h/7d/30d selector was removed and 24h is
-// what this chart was already rendering.
-const METRICS_RANGE = '24h';
+/*
+ * Fixed metrics window. This was 24h while the series came from Prometheus at
+ * hourly resolution; the accounting service only has daily points, so 24h would
+ * draw a single value and 30 days is the useful window.
+ */
+const METRICS_RANGE = '30d';
 
 export function ClusterMetrics({ onLastUpdated }) {
 
@@ -153,11 +159,10 @@ export function ClusterMetrics({ onLastUpdated }) {
     }
   }, [errorMessage]);
   if (data) {
-    console.log("Got data from api");
-    console.log(data);
-    // Go through the data, and for each time item, convert it to human readable hours
+    // `date` is a UTC calendar day (`YYYY-MM-DD`) from the accounting service;
+    // render it in UTC so it doesn't slip a day west of Greenwich.
     for (let i = 0; i < data.values.length; i++) {
-      data.values[i].humanDate = new Date(data.values[i].date * 1000).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', hour12: true });
+      data.values[i].humanDate = new Date(data.values[i].date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
     }
   }
   

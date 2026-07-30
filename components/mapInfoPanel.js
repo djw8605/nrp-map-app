@@ -190,7 +190,10 @@ function MetricCard({title, value, belowText, difference}) {
             {value}
           </p>
           <div className="mt-1 flex items-center gap-1.5">
-            {difference && (
+            {/* Render the badge only for a real percentage. A previous window of
+                zero makes this Infinity or NaN, and `{0 && ...}` / `{NaN && ...}`
+                put the bare number on screen instead of nothing. */}
+            {Number.isFinite(difference) && (
               <BadgeDelta size="xs" deltaType={deltaType} isIncreasePositive={true}>
                 {(difference * 100).toLocaleString(undefined, {maximumFractionDigits: 0})}%
               </BadgeDelta>

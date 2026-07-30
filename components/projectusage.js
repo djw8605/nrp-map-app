@@ -88,13 +88,13 @@ function Projects({ setSelectedNamespace }) {
       sortable: true,
     },
     {
-      name: "CPUs",
+      name: "CPU Hours",
       selector: row => row.cpus,
       format: row => row.cpus.toFixed(0),
       sortable: true,
     },
     {
-      name: "GPUs",
+      name: "GPU Hours",
       selector: row => row.gpus,
       format: row => row.gpus.toFixed(0),
       sortable: true,
@@ -117,8 +117,8 @@ function Projects({ setSelectedNamespace }) {
       }
       data.push({
         name: key,
-        cpus: namespace_usage.data.values[key].cpu,
-        gpus: namespace_usage.data.values[key].gpu,
+        cpus: namespace_usage.data.values[key].cpuHours,
+        gpus: namespace_usage.data.values[key].gpuHours,
         ...namespace_info_map[key]
       });
     });

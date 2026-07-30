@@ -1,15 +1,76 @@
-import { PrometheusDriver } from 'prometheus-query';
-import jayson from 'jayson';
+/*
+ * Front-page cluster metrics, from the NRP accounting service.
+ *
+ * These three series used to be instantaneous Prometheus counts sampled hourly
+ * over 24h: GPUs carrying a DCGM temperature reading, running `jupyter-*` pods,
+ * and namespaces with a GPU. The accounting service only keeps whole days, so
+ * each one becomes its daily equivalent over a multi-day window:
+ *
+ * - `gpus`: GPU-hours / 24, i.e. the time-weighted average number of GPUs
+ *   allocated across the day rather than a reading at one instant.
+ * - `jupyter_pods`: distinct `jupyter-*` pods that ran at some point that day.
+ * - `gpu_namespaces`: namespaces with any GPU usage that day.
+ *
+ * GPU-hours come back for the whole window in one call. The two counts are
+ * distinct-counts, which the API only answers a day at a time, so those fan out
+ * one request per day behind a concurrency limit.
+ *
+ * The route keeps its `?query=clustermetrics` shape, but `date` is now a
+ * `YYYY-MM-DD` calendar day instead of a Unix timestamp.
+ */
+import {
+  callAccountingTool,
+  eachDay,
+  mapWithConcurrency,
+  resolveRangeWindow,
+} from '../../lib/accountingApi';
 
-const prom = new PrometheusDriver({
-  endpoint: "https://thanos.nrp-nautilus.io/",
-  baseURL: "/api/v1", // default value
-  timeout: 60000
-});
+const HOURS_PER_DAY = 24;
+
+async function gpuHoursByDate(window) {
+  const result = await callAccountingTool('query_resource_usage', {
+    start_date: window.start,
+    end_date: window.end,
+    resource: 'gpu',
+    group_by: ['date'],
+    limit: Math.max(window.days, 1),
+  });
+
+  const byDate = new Map();
+  for (const row of result?.rows || []) {
+    byDate.set(row.date, parseFloat(row.usage) || 0);
+  }
+  return byDate;
+}
+
+/*
+ * `list_*` tools answer with `total_count`, the size of the full match set,
+ * which is the number we want. `limit: 1` keeps them from also shipping back
+ * every value to get there.
+ */
+async function countGpuNamespaces(day) {
+  const result = await callAccountingTool('list_active_namespaces', {
+    start_date: day,
+    end_date: day,
+    resource: 'gpu',
+    limit: 1,
+  });
+  return result?.total_count || 0;
+}
+
+async function countJupyterPods(day) {
+  const result = await callAccountingTool('list_filter_values', {
+    dimension: 'pod_name',
+    granularity: 'pod',
+    prefix: 'jupyter-',
+    start_date: day,
+    end_date: day,
+    limit: 1,
+  });
+  return result?.total_count || 0;
+}
 
 export default async function handler(req, res) {
-  //console.log(req);
-  //console.log(req.url);
   const url = new URL(req.url, `http://${req.headers.host}`);
   const query = url.searchParams.get('query');
 
@@ -17,90 +78,34 @@ export default async function handler(req, res) {
     return res.status(400).send('Missing query parameter');
   }
 
-  var pomQuery = ""
-  if (query == "gpumetrics") {
-    pomQuery = ' count (DCGM_FI_DEV_GPU_TEMP{namespace!=""} * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:)';
-  } else if (query == "numpods") {
-    pomQuery = 'count(kube_pod_info)';
-    //pomQuery = 'sum(kube_node_status_capacity{resource="cpu"})';
-  } else if (query == "namespacemetrics") {
-    pomQuery = 'count(count by (namespace) (kube_pod_info))'
-  } else if (query == "clustermetrics") {
-    pomQuery = `
-      label_replace(count(kube_pod_info{pod=~"jupyter-.*"}), "type", "jupyter_pods", "", "")
-      or
-      label_replace(count(count by (namespace) (DCGM_FI_DEV_GPU_TEMP{namespace!="gpu-mon"})), "type", "gpu_namespaces", "", "")
-      or
-      label_replace(count (DCGM_FI_DEV_GPU_TEMP{namespace!="gpu-mon"} * on (namespace, pod) group_left(node) max by (namespace, pod) (node_namespace_pod:kube_pod_info:)), "type", "gpus", "", "")
-    `
-  }
-
-  
-  
-  const range = url.searchParams.get('range') || '24h';
-  const rangeMap = {
-    '24h': { ms: 24 * 60 * 60 * 1000, step: 60 * 60 },
-    '7d': { ms: 7 * 24 * 60 * 60 * 1000, step: 6 * 60 * 60 },
-    '30d': { ms: 30 * 24 * 60 * 60 * 1000, step: 24 * 60 * 60 },
-  };
-  const rangeConfig = rangeMap[range] || rangeMap['24h'];
-
-  const now = new Date();
-  // Round now to the nearest hour, rounding down
-  now.setSeconds(0);
-  now.setMilliseconds(0);
-  now.setMinutes(0);
-  const start = new Date(now.getTime() - rangeConfig.ms);
-  const end = now;
-  const step = rangeConfig.step;
-
-  //prom.rangeQuery(pomQuery, start, end, step);
-  var result = null;
-  console.log("Querying Prometheus with query: " + pomQuery);
-  console.log("Start: " + start);
-  console.log("End: " + end);
-  console.log("Step: " + step);
-  try {
-    result = await prom.rangeQuery(pomQuery, start, end, step);
-  } catch (e) {
-    console.log(e);
-    return res.status(500).json({ error: e })
-  }
-  if (query == "clustermetrics") {
-    console.log(result);
-  }
-
-  var total_pods;
-  var namespaces;
-  var gpus;
-
-  for (let j = 0; j < result.result.length; j++) {
-    console.log(result.result[j]);
-    console.log(result.result[j].metric);
-    console.log(result.result[j].metric.labels.type);
-    if (result.result[j].metric.labels.type == "jupyter_pods") {
-      total_pods = result.result[j].values;
-    } else if (result.result[j].metric.labels.type == "gpu_namespaces") {
-      namespaces = result.result[j].values;
-    } else if (result.result[j].metric.labels.type == "gpus") {
-      gpus = result.result[j].values;
-    }
-  }
-
-  // Merge the 3 results into a single array
-  const mergedResults = [];
-  for (let i = 0; i < gpus.length; i++) {
-
-    mergedResults.push({
-      date: new Date(gpus[i].time).getTime() / 1000,
-      gpus: gpus[i].value,
-      jupyter_pods: total_pods[i].value,
-      gpu_namespaces: namespaces[i].value
+  if (query !== 'clustermetrics') {
+    return res.status(400).json({
+      error: `Unsupported query '${query}'. This route serves 'clustermetrics'.`,
     });
   }
-    
-  console.log(mergedResults);
-  res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate')
-  res.setHeader('Content-Type', 'application/json');
-  res.status(200).json({ values: mergedResults, updateTime: Date.now() });
+
+  try {
+    const window = await resolveRangeWindow(url.searchParams.get('range') || '30d');
+    const days = eachDay(window.start, window.end);
+
+    const [gpuHours, namespaceCounts, jupyterCounts] = await Promise.all([
+      gpuHoursByDate(window),
+      mapWithConcurrency(days, countGpuNamespaces),
+      mapWithConcurrency(days, countJupyterPods),
+    ]);
+
+    const values = days.map((day, index) => ({
+      date: day,
+      gpus: (gpuHours.get(day) || 0) / HOURS_PER_DAY,
+      jupyter_pods: jupyterCounts[index],
+      gpu_namespaces: namespaceCounts[index],
+    }));
+
+    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate');
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200).json({ values, updateTime: Date.now() });
+  } catch (error) {
+    console.error('Error in prommetrics API:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
 }
