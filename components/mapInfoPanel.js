@@ -19,6 +19,13 @@ import { formatCompactNumber } from '../lib/formatUtils';
  */
 const METRICS_RANGE = '24h';
 
+/*
+ * The GPU-hours trend comes from the accounting service, which only has daily
+ * points, so a 24h window would draw a single bar. Thirty days is the same
+ * window the accounting tools default to for trends.
+ */
+const GPU_TREND_RANGE = '30d';
+
 /**
  * Format bytes as human-readable text.
  *
@@ -210,7 +217,10 @@ export function SiteStats({site}) {
     return acc + parseInt(node.gpus)
   }, 0);
 
-  const periodLabel = 'vs previous 24h';
+  // Accounting data is daily, so the window the API actually served may not be
+  // the literal 24 hours the old Thanos query used. Label what came back.
+  const windowDays = data?.days || 1;
+  const periodLabel = windowDays === 1 ? 'vs previous day' : `vs previous ${windowDays} days`;
 
   if (errorMessage) {
     return (
@@ -261,7 +271,7 @@ function StatusBadge({icon, text, color}) {
 
 export function SiteGpuStats({site}) {
   // Fetch the GPU metrics
-  const {data, error} = useSWR(`/api/sitegpus?site=${site.slug}&range=${METRICS_RANGE}`, fetcher, {refreshInterval: 60000});
+  const {data, error} = useSWR(`/api/sitegpus?site=${site.slug}&range=${GPU_TREND_RANGE}`, fetcher, {refreshInterval: 60000});
   const errorMessage = error?.message || null;
   useEffect(() => {
     if (errorMessage) {
@@ -271,7 +281,9 @@ export function SiteGpuStats({site}) {
 
   var cleaned_data = null;
   if (data) {
-    const dateFormatter = new Intl.DateTimeFormat(undefined, {hour: 'numeric'});
+    // `item.time` is a UTC calendar day (`YYYY-MM-DD`) from the accounting
+    // service; format it in UTC so it doesn't slip a day west of Greenwich.
+    const dateFormatter = new Intl.DateTimeFormat(undefined, {month: 'short', day: 'numeric', timeZone: 'UTC'});
 
     cleaned_data = data.map((item) => {
       let current_date = new Date(item.time);
@@ -290,7 +302,7 @@ export function SiteGpuStats({site}) {
     );
   }
 
-  const title = 'GPU Hours (Hourly)';
+  const title = 'GPU Hours (Daily)';
 
   return (
     <Card

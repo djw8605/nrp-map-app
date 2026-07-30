@@ -17,7 +17,9 @@ export default function PrometheusErrorToast({ message, onDismiss, duration = 60
     <div className="fixed bottom-4 right-4 z-[9999] max-w-sm rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 shadow-lg dark:border-red-800/60 dark:bg-red-900/30 dark:text-red-200">
       <div className="flex items-start justify-between gap-3">
         <div className="text-sm">
-          <div className="font-semibold">Prometheus error</div>
+          {/* Not all metrics come from Prometheus any more — GPU/CPU hours are
+              served by the accounting service — so keep the title generic. */}
+          <div className="font-semibold">Metrics error</div>
           <div className="mt-1">{message}</div>
         </div>
         <button

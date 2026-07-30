@@ -115,6 +115,8 @@ The deployment includes RBAC configuration:
 
 ### Website (Next.js)
 - `R2_PUBLIC_URL` - Public URL for the Cloudflare R2 bucket (optional, defaults to `https://nrp-dashboard.r2.dev/nodes.json`)
+- `NRP_ACCOUNTING_API_URL` - Base URL of the [NRP accounting](https://github.com/djw8605/nrp-clickhouse) OpenAPI bridge, which serves the per-site GPU/CPU hour panels (optional, defaults to `https://nrp-accounting-mcp.nrp-nautilus.io/openapi`)
+- `NRP_ACCOUNTING_API_KEY` - Bearer token for that service (the `MCPO_API_KEY` it was deployed with). Omit only if the deployment is unauthenticated.
 
 ### Node Generator (Kubernetes)
 - `NETBOX_TOKEN` - Netbox API token

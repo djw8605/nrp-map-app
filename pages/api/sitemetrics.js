@@ -1,12 +1,18 @@
-import { PrometheusDriver } from 'prometheus-query';
-import { getNodesDataFromR2 } from "../../lib/nodesUtils";
-
-const prom = new PrometheusDriver({
-  endpoint: "https://thanos.nrp-nautilus.io/",
-  baseURL: "/api/v1", // default value
-  timeout: 60000
-});
-
+/*
+ * GPU and CPU hours for one site, from the NRP accounting service.
+ *
+ * This used to run a `sum_over_time(namespace_allocated_resources{node=~...})`
+ * against Thanos with every node at the site in one regex. The accounting
+ * service already computes the same hours daily from 5-minute samples, so we
+ * ask it instead: one call for the current window, one for the window before it
+ * to drive the delta badge.
+ *
+ * The response keeps the `gpuHours`/`cpuHours`/`prevGpuHours`/`prevCpuHours`
+ * shape the panel already reads, and adds the resolved date window so the UI
+ * can label what it is actually showing.
+ */
+import { getSiteNodeNames } from "../../lib/nodesUtils";
+import { fetchNodeResourceHours, resolveRangeWindow } from "../../lib/accountingApi";
 
 export default async function handler(req, res) {
 
@@ -16,73 +22,49 @@ export default async function handler(req, res) {
   if (!site) {
     return res.status(400).send('Missing site parameter');
   }
-  const rangeMap = {
-    '24h': { label: '1d', ms: 24 * 60 * 60 * 1000 },
-    '7d': { label: '7d', ms: 7 * 24 * 60 * 60 * 1000 },
-    '30d': { label: '30d', ms: 30 * 24 * 60 * 60 * 1000 },
-  };
-  const rangeConfig = rangeMap[range] || rangeMap['7d'];
 
   try {
-    // Fetch nodes data from R2
-    const Nodes = await getNodesDataFromR2();
-
-    // Get the sites
-    let nodes;
-    for (var i = 0; i < Nodes.length; i++) {
-      if (Nodes[i].slug == site) {
-        nodes = Nodes[i].nodes;
-        break;
-      }
-    }
+    const nodes = await getSiteNodeNames(site);
 
     if (!nodes) {
       return res.status(404).send('Site not found');
     }
 
-    // Combine all node names into a regex
-    var nodeRegex = nodes
-      .map((node) => node.name.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&'))
-      .join('|');
-    
-    const query = `sum by (resource) (sum_over_time(namespace_allocated_resources{node=~'${nodeRegex}', resource=~'nvidia_com.*|cpu'}[${rangeConfig.label}:1h]))`;
-    var multiResults = await Promise.all([
-      prom.instantQuery(query),
-      prom.instantQuery(query, new Date(new Date().getTime() - rangeConfig.ms))
-    ])
-    
-    var results = multiResults[0];
-    var prevResults = multiResults[1];
-    let gpuRegex = /nvidia_com.*/;
-    let to_return = { 
-      "gpuHours": 0,
-      "cpuHours": 0,
-      "prevGpuHours": 0,
-      "prevCpuHours": 0,
-    }
-    for (var i = 0; i < results.result.length; i++) {
-      if (gpuRegex.test(results.result[i].metric.labels.resource)) {
-        to_return["gpuHours"] += parseFloat(results.result[i].value.value);
-      } else {
-        to_return["cpuHours"] += parseFloat(results.result[i].value.value);
-      }
+    // A site with no nodes has no usage to account for; skip the round trips.
+    if (nodes.length === 0) {
+      res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate');
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(200).json({
+        gpuHours: 0,
+        cpuHours: 0,
+        prevGpuHours: 0,
+        prevCpuHours: 0,
+      });
     }
 
-    for (var i = 0; i < prevResults.result.length; i++) {
-      if (gpuRegex.test(prevResults.result[i].metric.labels.resource)) {
-        to_return["prevGpuHours"] += parseFloat(prevResults.result[i].value.value);
-      } else {
-        to_return["prevCpuHours"] += parseFloat(prevResults.result[i].value.value);
-      }
-    }
-    //console.log(to_return);
+    const window = await resolveRangeWindow(range);
+    const [current, previous] = await Promise.all([
+      fetchNodeResourceHours(nodes, window.start, window.end),
+      fetchNodeResourceHours(nodes, window.prevStart, window.prevEnd),
+    ]);
+
+    const to_return = {
+      gpuHours: current.gpuHours,
+      cpuHours: current.cpuHours,
+      prevGpuHours: previous.gpuHours,
+      prevCpuHours: previous.cpuHours,
+      days: window.days,
+      startDate: window.start,
+      endDate: window.end,
+    };
+
     res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate')
     res.setHeader('Content-Type', 'application/json');
     res.status(200).json(to_return);
 
   } catch (error) {
     console.error('Error in sitemetrics API:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 
 }
