@@ -4,6 +4,7 @@ import Map, {
   FullscreenControl,
   NavigationControl,
   Marker,
+  Popup,
 } from 'react-map-gl';
 import useSWR from 'swr';
 import { fetcher } from '../lib/fetcher';
@@ -13,6 +14,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {faUpRightAndDownLeftFromCenter} from "@fortawesome/free-solid-svg-icons";
 
 import SitePinMarker from './map/SitePinMarker';
+import SiteHoverCard from './map/SiteHoverCard';
 import { NRP_STANDARD_STYLE, OVERVIEW_CONFIG, resolveLightPreset } from './map/standardStyle';
 import { applyBasemapConfig, registerBuildingInteractions } from './map/useStandardBasemap';
 
@@ -22,6 +24,47 @@ const COMPACT_RESERVE_PX = 56;
 // Matches MapOverlayPanel's compact threshold, so padding and layout agree.
 const PANEL_RESERVE_MIN_WIDTH = 640;
 const LEGEND_PIN_SIZE = 20;
+
+/*
+ * Declared at module scope, NOT inside NodeMap.
+ *
+ * A component defined in the render body is a new type on every render, so React
+ * unmounts and remounts it — which recreates the DOM node and replays the glass
+ * panel's entrance animation. NodeMap re-renders on every zoom tick and every pin
+ * hover, so nested here the legend visibly flickered each time.
+ */
+const Legend = ({ selectedSites, selectionLegendName }) => (
+  // Bottom-LEFT: the overlay panel occupies the right edge. Swatches render the
+  // real SitePinMarker so the legend cannot drift from the pins on the map.
+  <div className="map-glass-panel absolute bottom-3 left-3 z-10 px-3 py-2.5">
+    <ul className="list-none space-y-2 text-xs text-slate-900 dark:text-slate-100">
+      <li className="flex flex-row items-center gap-2.5">
+        <SitePinMarker size={LEGEND_PIN_SIZE} interactive={false} />
+        NRP Site
+      </li>
+      <li className="flex flex-row items-center gap-2.5">
+        <SitePinMarker isOsdfCache size={LEGEND_PIN_SIZE} interactive={false} />
+        OSDF Cache Site
+      </li>
+      {selectedSites && selectedSites.length > 0 && (
+        <li className="flex flex-row items-center gap-2.5 border-t border-slate-300/60 pt-2 dark:border-slate-600/60">
+          <SitePinMarker isSelected size={LEGEND_PIN_SIZE} interactive={false} />
+          {selectionLegendName}
+        </li>
+      )}
+    </ul>
+  </div>
+);
+
+/*
+ * Zoom -> pin size. Shared by the pins themselves and by the hover card, which
+ * has to clear whichever pin it is describing, so the two cannot drift apart.
+ */
+const pinSizeForZoom = (zoom) => Math.max(Math.min(6.5 * (zoom || 1), 34), 18);
+const highlightedPinSizeForZoom = (zoom) => Math.max(Math.min(6.5 * (zoom || 1) * 1.22, 40), 22);
+// Mirrors the height multiplier in the .map-pin-marker rule (the 30/24 viewBox).
+const PIN_ASPECT = 1.25;
+const HOVER_CARD_GAP_PX = 10;
 
 export default function NodeMap({
   setSelectedSite,
@@ -50,11 +93,21 @@ export default function NodeMap({
   const mapRef = externalMapRef || internalMapRef;
   const basemapReadyRef = useRef(false);
   const [zoom, setZoom] = useState(3);
+  const [hoveredSite, setHoveredSite] = useState(null);
 
   // Read by the building-hover interaction without re-registering it on each change.
   const isSiteModeRef = useRef(isSiteMode);
   useEffect(() => {
     isSiteModeRef.current = isSiteMode;
+  }, [isSiteMode]);
+
+  /*
+   * Drop any hovered pin when drilling into a site. The card is hidden in site
+   * mode anyway, but a site entered from the panel's picker never fires a pin
+   * mouseleave, so without this the stale card reappears on the way back out.
+   */
+  useEffect(() => {
+    if (isSiteMode) setHoveredSite(null);
   }, [isSiteMode]);
 
   // Helper to check if a site is selected
@@ -160,8 +213,8 @@ export default function NodeMap({
 
     // The head is 86% of the pin's box width, so the box runs a little larger
     // than the old circle-plus-tail pin to land on the same visual weight.
-    const computedSize = Math.max(Math.min(6.5 * (zoom || 1), 34), 18);
-    const computedSelectedSize = Math.max(Math.min(6.5 * (zoom || 1) * 1.22, 40), 22);
+    const computedSize = pinSizeForZoom(zoom);
+    const computedSelectedSize = highlightedPinSizeForZoom(zoom);
 
     // Render OSDF cache pins last so they stack on top of nearby regular
     // NRP pins (e.g. Internet2 Denver / Boise pairs are registered separately
@@ -186,6 +239,9 @@ export default function NodeMap({
           anchor="bottom"
           onClick={(e) => {
             e.originalEvent.stopPropagation();
+            // A tap on a touch device fires mouseenter first; clear it so the
+            // card does not hang over the drill-in animation.
+            setHoveredSite(null);
             // Ctrl/Cmd + Click for multi-select, regular click for single select
             if (e.originalEvent.ctrlKey || e.originalEvent.metaKey) {
               toggleSiteSelection(node);
@@ -195,7 +251,14 @@ export default function NodeMap({
             }
           }}
         >
-          <SitePinMarker isSelected={highlighted} isOsdfCache={osdfCache} size={finalSize} title={node.name} />
+          <SitePinMarker
+            isSelected={highlighted}
+            isOsdfCache={osdfCache}
+            size={finalSize}
+            title={node.name}
+            onMouseEnter={() => setHoveredSite(node)}
+            onMouseLeave={() => setHoveredSite(null)}
+          />
         </Marker>
       );
     });
@@ -204,6 +267,7 @@ export default function NodeMap({
   // Marker clicks stop propagation, so anything reaching here is bare map.
   const onMapClick = useCallback(() => {
     setSelectedSite(null);
+    setHoveredSite(null);
     // Clicking bare map is one of the ways out of the drill-in.
     if (isSiteMode && onExitOverview) onExitOverview();
   }, [setSelectedSite, isSiteMode, onExitOverview]);
@@ -239,31 +303,18 @@ export default function NodeMap({
   }
 
 
-  // Create the legend
-  const Legend = () => {
-    return (
-      // Bottom-LEFT: the overlay panel occupies the right edge. Swatches render the
-      // real SitePinMarker so the legend cannot drift from the pins on the map.
-      <div className="map-glass-panel absolute bottom-3 left-3 z-10 px-3 py-2.5">
-        <ul className="list-none space-y-2 text-xs text-slate-900 dark:text-slate-100">
-          <li className="flex flex-row items-center gap-2.5">
-            <SitePinMarker size={LEGEND_PIN_SIZE} interactive={false} />
-            NRP Site
-          </li>
-          <li className="flex flex-row items-center gap-2.5">
-            <SitePinMarker isOsdfCache size={LEGEND_PIN_SIZE} interactive={false} />
-            OSDF Cache Site
-          </li>
-          {selectedSites && selectedSites.length > 0 && (
-            <li className="flex flex-row items-center gap-2.5 border-t border-slate-300/60 pt-2 dark:border-slate-600/60">
-              <SitePinMarker isSelected size={LEGEND_PIN_SIZE} interactive={false} />
-              {selectionLegendName}
-            </li>
-          )}
-        </ul>
-      </div>
-    );
-  };
+  /*
+   * No hover card while drilled into a site, and none for the site that is
+   * already open — the overlay panel is showing all of this and more.
+   */
+  const hoverCardSite =
+    hoveredSite && !isSiteMode && hoveredSite !== selectedSite ? hoveredSite : null;
+
+  // Lift the card clear of the pin it describes, at whatever size this zoom draws it.
+  const hoveredPinHeight =
+    (hoverCardSite && isSiteSelected(hoverCardSite)
+      ? highlightedPinSizeForZoom(zoom)
+      : pinSizeForZoom(zoom)) * PIN_ASPECT;
 
   return (
     <>
@@ -286,10 +337,37 @@ export default function NodeMap({
 
           {pins}
 
+          {/*
+            * One Popup for whichever pin is hovered, rather than a tooltip nested
+            * in each Marker: markers are sibling transformed divs, so a nested
+            * card would be trapped in its own stacking context and painted under
+            * neighbouring pins. Mapbox's popup container sits above them all.
+            * Keyed by site so the entrance animation replays pin to pin.
+            */}
+          {hoverCardSite && (
+            <Popup
+              key={hoverCardSite.id}
+              longitude={hoverCardSite.longitude}
+              latitude={hoverCardSite.latitude}
+              anchor="bottom"
+              offset={[0, -(hoveredPinHeight + HOVER_CARD_GAP_PX)]}
+              closeButton={false}
+              closeOnClick={false}
+              closeOnMove={false}
+              focusAfterOpen={false}
+              maxWidth="none"
+              className="nrp-hover-popup"
+            >
+              <SiteHoverCard site={hoverCardSite} />
+            </Popup>
+          )}
+
         </Map>
 
         {/* Overlay stack. The legend is noise once zoomed into a single site. */}
-        {!isSiteMode && <Legend />}
+        {!isSiteMode && (
+          <Legend selectedSites={selectedSites} selectionLegendName={selectionLegendName} />
+        )}
 
         {showExpandLink && !isSiteMode && (
           <Link

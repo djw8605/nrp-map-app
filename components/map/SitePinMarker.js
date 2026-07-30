@@ -44,8 +44,19 @@ const PIN_PATH = `M12 30 L3.44 17.23 A${HEAD_RADIUS} ${HEAD_RADIUS} 0 1 1 20.56 
  * @param {boolean} [interactive] - false for legend swatches and dropdown rows:
  *   drops the pointer cursor and hover lift, and hides the pin from assistive
  *   tech since the adjacent text already names it.
+ * @param {string} [title] - accessible name only. Not set as a `title`
+ *   attribute: the map draws its own glass hover card, and the browser's native
+ *   tooltip would otherwise fade in on top of it.
  */
-export default function SitePinMarker({ isSelected, isOsdfCache = false, size = 26, title, interactive = true }) {
+export default function SitePinMarker({
+  isSelected,
+  isOsdfCache = false,
+  size = 26,
+  title,
+  interactive = true,
+  onMouseEnter,
+  onMouseLeave,
+}) {
   const variant = isSelected ? VARIANTS.selected : (isOsdfCache ? VARIANTS.osdfCache : VARIANTS.site);
 
   return (
@@ -59,7 +70,8 @@ export default function SitePinMarker({ isSelected, isOsdfCache = false, size = 
         .filter(Boolean)
         .join(' ')}
       style={{ '--pin-size': `${size}px` }}
-      title={interactive ? title : undefined}
+      onMouseEnter={interactive ? onMouseEnter : undefined}
+      onMouseLeave={interactive ? onMouseLeave : undefined}
       aria-label={interactive ? title : undefined}
       aria-hidden={interactive ? undefined : true}
     >
