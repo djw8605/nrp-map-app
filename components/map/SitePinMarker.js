@@ -6,8 +6,9 @@
  * and being a real path it stays crisp when the zoom-driven size changes instead
  * of relying on a rotated square tail and two sets of borders lining up.
  *
- * Every site uses the same pin. Selection is the only state it encodes: a site's
- * OSDF node count lives in its detail panel, and /osdf-nodes covers that view.
+ * Every site uses the same pin. Selection and "this pin is several merged sites"
+ * are the only states it encodes: a site's OSDF node count lives in its detail
+ * panel, and /osdf-nodes covers that view.
  */
 const VARIANTS = {
   site: {
@@ -44,22 +45,40 @@ const PIN_PATH = `M12 30 L3.44 17.23 A${HEAD_RADIUS} ${HEAD_RADIUS} 0 1 1 20.56 
  * @param {boolean} [interactive] - false for legend swatches and dropdown rows:
  *   drops the pointer cursor and hover lift, and hides the pin from assistive
  *   tech since the adjacent text already names it.
+ * @param {string} [title] - accessible name only. Not set as a `title`
+ *   attribute: the map draws its own glass hover card, and the browser's native
+ *   tooltip would otherwise fade in on top of it.
+ * @param {number} [count] - how many sites this pin stands for. Anything above 1
+ *   adds the corner badge; the number is the only thing distinguishing a merged
+ *   pin from a single site, so the pin shape itself is deliberately unchanged.
  */
-export default function SitePinMarker({ isSelected, isOsdfCache = false, size = 26, title, interactive = true }) {
+export default function SitePinMarker({
+  isSelected,
+  isOsdfCache = false,
+  size = 26,
+  count = 1,
+  title,
+  interactive = true,
+  onMouseEnter,
+  onMouseLeave,
+}) {
   const variant = isSelected ? VARIANTS.selected : (isOsdfCache ? VARIANTS.osdfCache : VARIANTS.site);
+  const isMerged = count > 1;
 
   return (
     <div
       className={[
         'map-pin-marker',
         isOsdfCache ? 'map-pin-marker--osdf-cache' : '',
+        isMerged ? 'map-pin-marker--merged' : '',
         isSelected ? 'map-pin-marker--selected' : '',
         interactive ? '' : 'map-pin-marker--static',
       ]
         .filter(Boolean)
         .join(' ')}
       style={{ '--pin-size': `${size}px` }}
-      title={interactive ? title : undefined}
+      onMouseEnter={interactive ? onMouseEnter : undefined}
+      onMouseLeave={interactive ? onMouseLeave : undefined}
       aria-label={interactive ? title : undefined}
       aria-hidden={interactive ? undefined : true}
     >
@@ -77,6 +96,18 @@ export default function SitePinMarker({ isSelected, isOsdfCache = false, size = 
         {/* Hollow core, so the pin still reads as a pin at 17px. */}
         <circle cx="12" cy={HEAD_CENTER_Y} r="3.9" fill="#ffffff" fillOpacity="0.95" />
       </svg>
+
+      {/*
+        * HTML rather than another <circle>/<text> pair in the SVG: the badge has a
+        * legibility floor (see .map-pin-marker__count) that must not shrink with
+        * the pin at world zoom, and an SVG child cannot opt out of the viewBox
+        * scaling. aria-hidden because the pin's aria-label already says "N sites".
+        */}
+      {isMerged ? (
+        <span className="map-pin-marker__count" aria-hidden="true">
+          {count}
+        </span>
+      ) : null}
     </div>
   );
 }

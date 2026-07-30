@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Badge } from '@tremor/react';
-import { RiCpuLine, RiServerLine, RiDatabase2Line } from '@remixicon/react';
+import { RiCpuLine, RiServerLine, RiDatabase2Line, RiStackLine } from '@remixicon/react';
 import {
   SiteGpuStats,
   SiteGpuTypes,
@@ -7,6 +8,8 @@ import {
   SiteStats,
 } from '../mapInfoPanel';
 import { SiteMultiSelectBox, SiteSelectBox } from './SiteSelect';
+import ClusterMemberList from './ClusterMemberList';
+import { summarizeSites } from '../../lib/siteClusters';
 
 // border-[1px] rather than border: see the note in ./SiteSelect.js — the global
 // `.border` rule in globals.css would otherwise override these colours.
@@ -138,38 +141,122 @@ export function MapOverviewContent({
  * No site name and no picker in here: the panel header renders one SiteSelectBox
  * that both names the current site and switches to another. Rendering the name in
  * the header *and* a picker below it showed the same institution twice.
+ *
+ * `site` may be a merged group from lib/siteClusters (see clusterSites). A group
+ * is site-shaped, so the badge row below reads it unchanged and reports the
+ * combined totals. The metric cards are the part that cannot be merged: every one
+ * of them fetches `/api/<metric>?site=<slug>` and a group has no slug of its own,
+ * so they always render for exactly one *member* — chosen here, named above the
+ * stack, and switchable from the member list. That keeps the panel honest instead
+ * of quietly showing the biggest member's charts under a merged heading.
  */
-export function MapSiteContent({ site }) {
+export function MapSiteContent({
+  site,
+  // Optional external control, so a page can keep its header picker and the panel
+  // pointing at the same member. Uncontrolled, the panel manages it alone.
+  focusedSiteId,
+  onFocusSite,
+  // The preview harness renders the identity half without the live fetches.
+  showMetrics = true,
+}) {
+  const [internalFocusId, setInternalFocusId] = useState(null);
+
   if (!site) return null;
 
-  const siteNodes = site.nodes || [];
-  const totalGpus = siteNodes.reduce((acc, node) => acc + (parseInt(node.gpus) || 0), 0);
-  const totalCaches = siteNodes.reduce((acc, node) => acc + (node.cache ? 1 : 0), 0);
+  const members = site.members || [site];
+  const isMerged = members.length > 1;
+
+  /*
+   * Falling back to members[0] rather than resetting on change: when the panel
+   * switches to a different group the remembered id is not in the new member
+   * list, so the lookup misses and the primary wins — which is the reset, without
+   * an effect that would render the old member's charts for one frame first.
+   */
+  const requestedId = focusedSiteId ?? internalFocusId;
+  const focusedSite =
+    members.find((member) => String(member.id) === String(requestedId)) || members[0];
+
+  const selectMember = (member) => {
+    setInternalFocusId(member.id);
+    if (onFocusSite) onFocusSite(member);
+  };
+
+  // Aggregate across the whole group; `site.nodes` is already the concatenation.
+  const { nodeCount, gpuCount, cacheCount } = summarizeSites([site]);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-row flex-wrap gap-2">
-        <Badge icon={RiServerLine} color="green">
-          {siteNodes.length} Nodes Online
-        </Badge>
-        {totalGpus > 0 && (
-          <Badge icon={RiCpuLine} color="blue">
-            {totalGpus} GPUs
+        {isMerged && (
+          /*
+           * Neutral rather than a fifth hue — this badge counts *sites*, not a
+           * resource, so it should not compete with the three that do. Tremor's
+           * own `slate` badge resolves to slate-400/10 on slate-500 text in dark
+           * mode, which is barely legible on the glass panel, hence the explicit
+           * surface. Same reasoning as the pin's count badge.
+           */
+          <Badge
+            icon={RiStackLine}
+            color="slate"
+            className="!bg-slate-200 !text-slate-700 dark:!bg-slate-600/60 dark:!text-slate-100"
+          >
+            {members.length} Sites Merged
           </Badge>
         )}
-        {totalCaches > 0 && (
+        <Badge icon={RiServerLine} color="green">
+          {nodeCount} {nodeCount === 1 ? 'Node' : 'Nodes'} Online
+        </Badge>
+        {gpuCount > 0 && (
+          <Badge icon={RiCpuLine} color="blue">
+            {gpuCount} {gpuCount === 1 ? 'GPU' : 'GPUs'}
+          </Badge>
+        )}
+        {cacheCount > 0 && (
           <Badge icon={RiDatabase2Line} color="violet">
-            {totalCaches} OSDF Nodes
+            {cacheCount} OSDF {cacheCount === 1 ? 'Node' : 'Nodes'}
           </Badge>
         )}
       </div>
 
-      <div className="flex flex-col gap-4">
-        <SiteStats site={site} />
-        {totalGpus > 0 ? <SiteGpuStats site={site} /> : null}
-        {totalGpus > 0 ? <SiteGpuTypes site={site} /> : null}
-        <SiteNetworkStats site={site} />
-      </div>
+      <ClusterMemberList
+        cluster={site}
+        activeSiteId={focusedSite.id}
+        onSelectSite={selectMember}
+      />
+
+      {showMetrics ? (
+        <div className="flex flex-col gap-4">
+          {/* Only when merged: for a single site this would restate the header. */}
+          {isMerged && (
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Usage ·{' '}
+              <span className="normal-case text-slate-700 dark:text-slate-200">
+                {focusedSite.name}
+              </span>
+            </p>
+          )}
+          <MemberMetrics site={focusedSite} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/*
+ * Keyed on the member's slug so switching members remounts the cards rather than
+ * re-rendering them: each card holds its own SWR subscription plus chart state,
+ * and without the remount the previous member's bars stay on screen until the new
+ * query resolves.
+ */
+function MemberMetrics({ site }) {
+  const { gpuCount } = summarizeSites([site]);
+
+  return (
+    <div key={site.slug} className="flex flex-col gap-4">
+      <SiteStats site={site} />
+      {gpuCount > 0 ? <SiteGpuStats site={site} /> : null}
+      {gpuCount > 0 ? <SiteGpuTypes site={site} /> : null}
+      <SiteNetworkStats site={site} />
     </div>
   );
 }
