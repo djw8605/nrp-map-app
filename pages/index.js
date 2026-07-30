@@ -11,10 +11,11 @@ import MapOverlayPanel from '../components/map/MapOverlayPanel'
 import { MapOverviewContent, MapSiteContent } from '../components/map/MapPanelContent'
 import { SiteSelectBox } from '../components/map/SiteSelect'
 import { useSiteDrillIn } from '../components/map/useSiteDrillIn'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { Card } from '@tremor/react'
 import useSWR from 'swr'
 import { fetcher } from '../lib/fetcher'
+import { DEFAULT_CLUSTER_RADIUS_KM, clusterSites, findGroupForSite } from '../lib/siteClusters'
 
 export default function Home() {
 
@@ -25,26 +26,59 @@ export default function Home() {
   const [regexPattern, setRegexPattern] = useState('');
   const [regexError, setRegexError] = useState('');
   const [lastUpdated, setLastUpdated] = useState(null);
-  
+  // Which member of the open pin the panel is pointed at. Nearby sites share a
+  // pin, so "what is selected" and "which site am I reading" are two questions.
+  const [focusedSiteId, setFocusedSiteId] = useState(null);
+
   // Fetch nodes for regex matching
   const { data: Nodes } = useSWR('/api/nodes', fetcher);
+
+  /*
+   * The same grouping NodeMap draws, at the configured ceiling radius rather than
+   * the zoom-shrunk one: the map splits a pin apart as you zoom in, but the panel
+   * should go on describing the whole location. Only needed so a site chosen from
+   * the header picker opens the pin that contains it.
+   */
+  const siteGroups = useMemo(
+    () => clusterSites(Nodes ? Object.values(Nodes) : [], { radiusKm: DEFAULT_CLUSTER_RADIUS_KM }),
+    [Nodes],
+  );
 
   const mapRef = useRef(null);
   // onExitSite keeps the panel in sync with camera exits we do not initiate here
   // (Escape key, clicking bare map).
   const { isSiteMode, enterSite, exitToOverview } = useSiteDrillIn(mapRef, {
-    onExitSite: () => setSelectedSite(null),
+    onExitSite: () => {
+      setSelectedSite(null);
+      setFocusedSiteId(null);
+    },
   });
 
-  // Selecting from the panel's dropdown should fly in just like clicking a pin.
+  /*
+   * One entry point for "look at this site", so the camera and the panel's
+   * highlighted row can never disagree. Reached from a pin click, from a pin the
+   * zoom split out of the open group, and from a row in the panel's member list.
+   * A merged group resolves to its primary member — that is the site the camera
+   * has coordinates for.
+   */
+  const focusSite = useCallback((site) => {
+    if (!site) return;
+    const target = site.primarySite ?? site;
+    setFocusedSiteId(target.id);
+    enterSite(target);
+  }, [enterSite]);
+
+  // Selecting from the panel's dropdown should fly in just like clicking a pin —
+  // opening the pin the site belongs to, with that site as the focused member.
   const handleSelectSiteFromPanel = useCallback((site) => {
     if (!site) {
       exitToOverview();
       return;
     }
-    setSelectedSite(site);
+    setSelectedSite(findGroupForSite(siteGroups, site.id) ?? site);
+    setFocusedSiteId(site.id);
     enterSite(site);
-  }, [enterSite, exitToOverview]);
+  }, [siteGroups, enterSite, exitToOverview]);
 
   // Handle regex pattern change for selection
   const handleRegexChange = (pattern) => {
@@ -104,8 +138,10 @@ export default function Home() {
               regexPattern={regexPattern}
               handleRegexChange={handleRegexChange}
               isSiteMode={isSiteMode}
-              onEnterSite={enterSite}
+              onEnterSite={focusSite}
+              focusedSiteId={focusedSiteId}
               onExitOverview={exitToOverview}
+              clusterRadiusKm={DEFAULT_CLUSTER_RADIUS_KM}
             >
               {selectedSite ? (
                 /* The picker in the header is the site's title: it names the open
@@ -116,13 +152,24 @@ export default function Home() {
                   titleNode={
                     <SiteSelectBox
                       id="panel-site-select"
-                      selectedSite={selectedSite}
+                      /* The picker's options are individual sites, so a merged pin
+                         has to offer its primary member: the group's own id is
+                         `cluster:<n>`, which matches nothing and would leave the
+                         header showing the empty placeholder. */
+                      selectedSite={selectedSite.primarySite ?? selectedSite}
                       setSelectedSite={handleSelectSiteFromPanel}
                     />
                   }
                   onBack={exitToOverview}
                 >
-                  <MapSiteContent site={selectedSite} />
+                  {/* Picking a member of a merged pin re-aims the camera as well as
+                      the metric cards — at street level the members are far enough
+                      apart to be off screen. */}
+                  <MapSiteContent
+                    site={selectedSite}
+                    focusedSiteId={focusedSiteId}
+                    onFocusSite={focusSite}
+                  />
                 </MapOverlayPanel>
               ) : (
                 <MapOverlayPanel position="right">

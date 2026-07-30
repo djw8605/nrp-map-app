@@ -18,6 +18,7 @@ import { FIXTURE_SITES } from '../lib/siteClusters.fixture';
 import { clusterChecksSummary, runClusterChecks } from '../lib/siteClusters.checks';
 import {
   DEFAULT_CLUSTER_RADIUS_KM,
+  clusterRadiusForZoom,
   clusterSites,
   describeMembers,
   findGroupForSite,
@@ -29,9 +30,9 @@ import {
 /*
  * Preview harness for merging nearby sites into one pin.
  *
- * Not linked from the navigation — it exists so the behaviour can be reviewed
- * before /  and /map opt in (both still pass clusterRadiusKm=0, so their pins are
- * unchanged by this branch). Three things are on the page:
+ * Not linked from the navigation — it exists so the behaviour can be inspected in
+ * isolation from the live pages, which pass a fixed clusterRadiusKm and have no
+ * way to vary it. Three things are on the page:
  *
  *  1. the real map, with the real overlay panel, at a radius you can drag;
  *  2. the panel and hover card rendered *outside* the map as well. Mapbox needs
@@ -52,6 +53,13 @@ const CONTROL_LABEL_CLASS = 'text-sm text-slate-500 dark:text-slate-400 block mb
 
 const formatDistance = (km) =>
   km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+
+/*
+ * Zooms worth reporting: the overview default, the band where groups start coming
+ * apart, and SITE_ZOOM from useSiteDrillIn — the one a pin click flies to, and the
+ * reason the radius has to shrink at all.
+ */
+const ZOOM_SAMPLES = [3, 9, 11, 12, 13, 14, 16.5];
 
 /** Segmented control, styled off the panel's own inputs rather than a new look. */
 function SegmentedControl({ options, value, onChange, ariaLabel }) {
@@ -169,6 +177,34 @@ export default function ClusterTestPage() {
   const checks = useMemo(() => runClusterChecks(), []);
   const checkSummary = useMemo(() => clusterChecksSummary(checks), [checks]);
 
+  /*
+   * What the map does as you zoom, without needing the map. NodeMap derives its
+   * working radius from the camera, so the pin count is a function of zoom — this
+   * runs the same clusterRadiusForZoom -> clusterSites chain at a few zooms so the
+   * declustering can be read off the page with no basemap.
+   *
+   * Latitude changes the size of a Mercator pixel, so this uses the data's own mean
+   * rather than a hardcoded one.
+   */
+  const meanLatitude = useMemo(() => {
+    const values = sites.map((site) => Number(site.latitude)).filter(Number.isFinite);
+    if (values.length === 0) return 0;
+    return values.reduce((total, value) => total + value, 0) / values.length;
+  }, [sites]);
+
+  const zoomBreakdown = useMemo(
+    () =>
+      ZOOM_SAMPLES.map((zoom) => {
+        const workingRadiusKm = clusterRadiusForZoom(effectiveRadiusKm, zoom, meanLatitude);
+        return {
+          zoom,
+          workingRadiusKm,
+          ...summarizeGrouping(clusterSites(sites, { radiusKm: workingRadiusKm })),
+        };
+      }),
+    [sites, effectiveRadiusKm, meanLatitude],
+  );
+
   // ---- Live map + panel ----
 
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -198,14 +234,21 @@ export default function ClusterTestPage() {
     setSelectedGroup(findGroupForSite(groups, focusedSiteId));
   }, [groups, focusedSiteId]);
 
+  /*
+   * Reached from a member row in the panel and from a pin the zoom split out of the
+   * open group (NodeMap calls onEnterSite without changing the selection in that
+   * case, so this is what keeps the panel's highlighted row on the site the camera
+   * actually flew to). Members can be up to the radius apart, which is well off
+   * screen at street-level zoom, so the camera always follows.
+   */
   const handleFocusMember = useCallback(
     (member) => {
-      setFocusedSiteId(member.id);
-      // Members can be up to the radius apart, which at street-level zoom is well
-      // off screen — so follow the selection with the camera when drilled in.
-      if (isSiteMode) enterSite(member);
+      const target = member?.primarySite ?? member;
+      if (!target) return;
+      setFocusedSiteId(target.id);
+      enterSite(target);
     },
-    [isSiteMode, enterSite],
+    [enterSite],
   );
 
   // ---- Token-free preview ----
@@ -255,7 +298,8 @@ export default function ClusterTestPage() {
             another, so only the last one painted is clickable. Below, those sites share a single
             pin carrying a count, while every site behind it keeps its name, its own node and GPU
             counts, and its own live metrics — listed in the panel and in the hover card rather
-            than folded away.
+            than folded away. The radius is a ceiling that shrinks with the zoom, so a group is
+            back to individual pins once they no longer overlap on screen.
           </p>
         </div>
       </section>
@@ -292,7 +336,7 @@ export default function ClusterTestPage() {
 
               <div className="min-w-[15rem] flex-1">
                 <label htmlFor="radius" className={CONTROL_LABEL_CLASS}>
-                  Merge radius —{' '}
+                  Merge radius ceiling —{' '}
                   <span className="font-semibold tabular-nums text-slate-700 dark:text-slate-200">
                     {radiusKm.toFixed(2)} km
                   </span>
@@ -335,6 +379,43 @@ export default function ClusterTestPage() {
               />
             </div>
 
+            <div className="mt-4">
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                As the camera zooms in
+              </p>
+              <div className="overflow-x-auto">
+                <div className="flex min-w-max gap-2">
+                  {zoomBreakdown.map((row) => {
+                    // SITE_ZOOM: where clicking a pin lands, and the case the fix is for.
+                    const isDrillIn = row.zoom === 16.5;
+                    return (
+                      <div
+                        key={row.zoom}
+                        className={[
+                          'min-w-[7.5rem] rounded-xl px-3 py-2',
+                          isDrillIn
+                            ? 'bg-blue-50 ring-1 ring-inset ring-blue-200 dark:bg-blue-500/15 dark:ring-blue-500/30'
+                            : 'bg-slate-50 dark:bg-slate-800/60',
+                        ].join(' ')}
+                      >
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          zoom {row.zoom}
+                          {isDrillIn ? ' · drill-in' : ''}
+                        </p>
+                        <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900 dark:text-slate-50">
+                          {row.pinCount} pins
+                        </p>
+                        <p className="text-xs tabular-nums text-slate-400 dark:text-slate-500">
+                          {row.workingRadiusKm > 0 ? formatDistance(row.workingRadiusKm) : 'no merge'}
+                          {row.mergedGroupCount > 0 ? ` · ${row.mergedGroupCount} merged` : ''}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
             {isLive && liveError ? (
               <p className="mt-3 text-sm text-red-600 dark:text-red-400">
                 Could not load /api/nodes: {liveError.message}. Switch back to Fixture to review the
@@ -353,8 +434,10 @@ export default function ClusterTestPage() {
           <h2 className={SECTION_LABEL_CLASS}>On the map</h2>
           <p className="mb-2 mt-1 text-sm text-slate-500 dark:text-slate-400">
             Click a pin to open the panel; inside a merged pin, pick a site from{' '}
-            <em>Sites at this location</em> to point the metric cards at it. Needs
-            NEXT_PUBLIC_MAPBOX_TOKEN.
+            <em>Sites at this location</em> to point the metric cards at it. The slider sets a{' '}
+            <em>ceiling</em> — zooming in shrinks the working radius, so groups come apart into
+            their own pins (furthest member first) and are fully separate by the time the drill-in
+            lands. Needs NEXT_PUBLIC_MAPBOX_TOKEN.
           </p>
           <div className="relative h-[22em] overflow-hidden rounded-xl bg-white shadow-sm dark:bg-slate-900 md:h-[38em]">
             {sites.length > 0 ? (
@@ -365,7 +448,8 @@ export default function ClusterTestPage() {
                 setSelectedSite={handleSelectFromMap}
                 selectedSite={selectedGroup}
                 isSiteMode={isSiteMode}
-                onEnterSite={enterSite}
+                onEnterSite={handleFocusMember}
+                focusedSiteId={focusedSiteId}
                 onExitOverview={exitToOverview}
                 showExpandLink={false}
               >

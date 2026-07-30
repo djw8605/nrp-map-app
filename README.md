@@ -30,13 +30,21 @@ radius into a single pin that carries a count, while keeping every member site
 intact so the overlay panel and the hover card can still name them, count their
 nodes and GPUs separately, and fetch each one's live metrics.
 
-It is opt-in: `NodeMap` takes a `clusterRadiusKm` prop that defaults to `0`
-(no merging), so `/` and `/map` are unaffected until they pass a radius.
+The radius is a **ceiling**, not a fixed distance. Merging only exists to stop
+pins from covering each other, so the working radius shrinks with the zoom
+(`clusterRadiusForZoom`): a group comes apart into individual pins — furthest
+member first — as soon as its members are more than ~48px apart on screen, and
+is fully separated by the time a drill-in lands at zoom 16.5. The panel keeps
+describing the whole location either way, so clicking a pin that split out of
+the open group re-aims the camera without discarding the member list.
+
+`/` and `/map` pass `clusterRadiusKm={DEFAULT_CLUSTER_RADIUS_KM}` (2 km).
+`NodeMap` defaults the prop to `0`, which disables merging entirely.
 
 Review it at **`/cluster-test`** — a harness with a radius slider, live or fixture
-sites, the panel and hover card rendered outside the map (so they can be judged
-without a Mapbox token), and the assertions from `lib/siteClusters.checks.js`
-running in the page.
+sites, a per-zoom pin-count breakdown, the panel and hover card rendered outside
+the map (so they can be judged without a Mapbox token), and the assertions from
+`lib/siteClusters.checks.js` running in the page.
 
 ### CORS
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import useSWR from "swr";
 import NodeMap from "../components/nodeMap";
@@ -7,6 +7,7 @@ import { MapOverviewContent, MapSiteContent } from "../components/map/MapPanelCo
 import { SiteSelectBox } from "../components/map/SiteSelect";
 import { useSiteDrillIn } from "../components/map/useSiteDrillIn";
 import { fetcher } from "../lib/fetcher";
+import { DEFAULT_CLUSTER_RADIUS_KM, clusterSites, findGroupForSite } from "../lib/siteClusters";
 
 /*
  * Full-viewport map. This route is embedded in third-party pages (nrp.ai), so:
@@ -24,12 +25,23 @@ export default function MapPage() {
   const [selectionLegendName, setSelectionLegendName] = useState('Selected Sites');
   const [regexPattern, setRegexPattern] = useState('');
   const [regexError, setRegexError] = useState('');
+  // Which member of the open pin the panel is pointed at; see pages/index.js.
+  const [focusedSiteId, setFocusedSiteId] = useState(null);
 
   const { data: Nodes } = useSWR('/api/nodes', fetcher);
+
+  const siteGroups = useMemo(
+    () => clusterSites(Nodes ? Object.values(Nodes) : [], { radiusKm: DEFAULT_CLUSTER_RADIUS_KM }),
+    [Nodes],
+  );
+
   // onExitSite keeps the panel in sync with camera exits we do not initiate here
   // (Escape key, clicking bare map).
   const { isSiteMode, enterSite, exitToOverview } = useSiteDrillIn(mapRef, {
-    onExitSite: () => setSelectedSite(null),
+    onExitSite: () => {
+      setSelectedSite(null);
+      setFocusedSiteId(null);
+    },
   });
 
   const showPanel = router.query.panel !== '0';
@@ -55,14 +67,24 @@ export default function MapPage() {
     }
   }, [Nodes]);
 
+  // One entry point for "look at this site", so the camera and the panel's
+  // highlighted row cannot disagree; see pages/index.js.
+  const focusSite = useCallback((site) => {
+    if (!site) return;
+    const target = site.primarySite ?? site;
+    setFocusedSiteId(target.id);
+    enterSite(target);
+  }, [enterSite]);
+
   const handleSelectSiteFromPanel = useCallback((site) => {
     if (!site) {
       exitToOverview();
       return;
     }
-    setSelectedSite(site);
+    setSelectedSite(findGroupForSite(siteGroups, site.id) ?? site);
+    setFocusedSiteId(site.id);
     enterSite(site);
-  }, [enterSite, exitToOverview]);
+  }, [siteGroups, enterSite, exitToOverview]);
 
   return (
     <div className="w-screen h-screen">
@@ -76,27 +98,33 @@ export default function MapPage() {
         regexPattern={regexPattern}
         handleRegexChange={handleRegexChange}
         isSiteMode={isSiteMode}
-        onEnterSite={enterSite}
+        onEnterSite={focusSite}
+        focusedSiteId={focusedSiteId}
         onExitOverview={exitToOverview}
         showExpandLink={false}
         reservePanelSpace={showPanel}
+        clusterRadiusKm={DEFAULT_CLUSTER_RADIUS_KM}
       >
         {showPanel ? (
           selectedSite ? (
             /* One picker in the header serves as the title and the switcher; see
-               pages/index.js. onClose duplicated onBack, so it is gone. */
+               pages/index.js, including why a merged pin passes its primary. */
             <MapOverlayPanel
               position="right"
               titleNode={
                 <SiteSelectBox
                   id="panel-site-select"
-                  selectedSite={selectedSite}
+                  selectedSite={selectedSite.primarySite ?? selectedSite}
                   setSelectedSite={handleSelectSiteFromPanel}
                 />
               }
               onBack={exitToOverview}
             >
-              <MapSiteContent site={selectedSite} />
+              <MapSiteContent
+                site={selectedSite}
+                focusedSiteId={focusedSiteId}
+                onFocusSite={focusSite}
+              />
             </MapOverlayPanel>
           ) : (
             <MapOverlayPanel position="right">

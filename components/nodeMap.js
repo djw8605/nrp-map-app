@@ -17,7 +17,12 @@ import SitePinMarker from './map/SitePinMarker';
 import SiteHoverCard from './map/SiteHoverCard';
 import { NRP_STANDARD_STYLE, OVERVIEW_CONFIG, resolveLightPreset } from './map/standardStyle';
 import { applyBasemapConfig, registerBuildingInteractions } from './map/useStandardBasemap';
-import { clusterSites, groupContainsAnySite, siteHasOsdfCache } from '../lib/siteClusters';
+import {
+  clusterRadiusForZoom,
+  clusterSites,
+  groupContainsAnySite,
+  siteHasOsdfCache,
+} from '../lib/siteClusters';
 
 // Panel is 360px wide inset 12px from the right edge; reserve it plus a gutter.
 const PANEL_RESERVE_PX = 384;
@@ -34,7 +39,7 @@ const LEGEND_PIN_SIZE = 20;
  * panel's entrance animation. NodeMap re-renders on every zoom tick and every pin
  * hover, so nested here the legend visibly flickered each time.
  */
-const Legend = ({ selectedSites, selectionLegendName, mergeRadiusKm = 0, hasMergedPins = false }) => (
+const Legend = ({ selectedSites, selectionLegendName, hasMergedPins = false }) => (
   // Bottom-LEFT: the overlay panel occupies the right edge. Swatches render the
   // real SitePinMarker so the legend cannot drift from the pins on the map.
   <div className="map-glass-panel absolute bottom-3 left-3 z-10 px-3 py-2.5">
@@ -48,11 +53,14 @@ const Legend = ({ selectedSites, selectionLegendName, mergeRadiusKm = 0, hasMerg
         OSDF Cache Site
       </li>
       {/* Only shown when something actually merged, so the legend does not explain
-          a badge that is nowhere on screen. */}
+          a badge that is nowhere on screen. Deliberately no distance: the working
+          radius shrinks as you zoom (see clusterRadiusForZoom), and a legend whose
+          number ticks over during a zoom reads as instrumentation, not a key. The
+          real distances are on the hover card and in the panel. */}
       {hasMergedPins && (
         <li className="flex flex-row items-center gap-2.5">
           <SitePinMarker size={LEGEND_PIN_SIZE} count={2} interactive={false} />
-          Sites within {mergeRadiusKm} km
+          Merged nearby sites
         </li>
       )}
       {selectedSites && selectedSites.length > 0 && (
@@ -94,11 +102,20 @@ export default function NodeMap({
   // Off when no panel is rendered (e.g. /map?panel=0) so the map stays centred.
   reservePanelSpace = true,
   /*
-   * Merge sites closer together than this into one pin (see lib/siteClusters).
-   * 0 disables it, which is the default: the live pages opt in rather than the
-   * behaviour changing under them. See /cluster-test for the preview harness.
+   * Ceiling on how far apart sites can be and still share a pin (lib/siteClusters).
+   * 0 disables merging. A *ceiling*, not a fixed value: the working radius shrinks
+   * with the zoom so groups come apart once their members no longer overlap on
+   * screen. See /cluster-test for the preview harness.
    */
   clusterRadiusKm = 0,
+  /*
+   * Which member of the open pin the panel is currently describing, when the caller
+   * tracks that. Only affects which pin draws as selected: without it the highlight
+   * sits on the group's primary member even after the panel has been pointed at a
+   * different one, so the rose pin and the panel disagree about what you are
+   * looking at once the zoom has split the group apart.
+   */
+  focusedSiteId,
   // Render these sites instead of fetching /api/nodes. For the preview harness,
   // which needs to show fixture geometry the live payload does not contain.
   sites: sitesOverride,
@@ -114,6 +131,9 @@ export default function NodeMap({
   const mapRef = externalMapRef || internalMapRef;
   const basemapReadyRef = useRef(false);
   const [zoom, setZoom] = useState(3);
+  // Feeds clusterRadiusForZoom: a Mercator pixel covers less ground away from the
+  // equator, so the same zoom separates pins sooner at high latitude.
+  const [centerLatitude, setCenterLatitude] = useState(39.635);
   const [hoveredSite, setHoveredSite] = useState(null);
 
   // Read by the building-hover interaction without re-registering it on each change.
@@ -123,12 +143,12 @@ export default function NodeMap({
   }, [isSiteMode]);
 
   /*
-   * Drop any hovered pin when drilling into a site. The card is hidden in site
-   * mode anyway, but a site entered from the panel's picker never fires a pin
-   * mouseleave, so without this the stale card reappears on the way back out.
+   * Drop any hovered pin when the drill-in state changes: a site entered from the
+   * panel's picker never fires a pin mouseleave, so without this a stale card
+   * hangs over the camera animation and reappears on the way back out.
    */
   useEffect(() => {
-    if (isSiteMode) setHoveredSite(null);
+    setHoveredSite(null);
   }, [isSiteMode]);
 
   /*
@@ -139,12 +159,37 @@ export default function NodeMap({
    * outside this file: the regex filter, the pickers, the legend count.
    */
 
-  // A pin is highlighted when the group itself is selected, or any site inside it
-  // is — a member picked from the panel's dropdown must light up its merged pin.
+  /*
+   * Exactly one pin is "the selected pin", even though a selection and a pin can
+   * describe overlapping sets of sites. The anchor is the single site the highlight
+   * belongs to — the focused member when the caller tracks one, otherwise the
+   * selection's primary. That resolves all four combinations:
+   *
+   *   selection merged  / pins merged      -> ids match
+   *   selection merged  / pins split       -> the anchor's pin, not all three
+   *   selection a site  / pins merged      -> the pin containing it (panel picker)
+   *   selection a site  / pins split       -> that site's own pin
+   *
+   * Without the anchor, a merged selection lit up every one of its members' pins
+   * the moment the zoom split them, which is the opposite of telling them apart.
+   */
+  const selectionAnchorId = !selectedSite
+    ? null
+    : focusedSiteId != null
+      ? String(focusedSiteId)
+      : String((selectedSite.primarySite || selectedSite).id);
+
   const isGroupSelected = (group) => {
     if (!selectedSite) return false;
     if (String(group.id) === String(selectedSite.id)) return true;
-    return group.members.some((member) => String(member.id) === String(selectedSite.id));
+    return group.members.some((member) => String(member.id) === selectionAnchorId);
+  };
+
+  // Any overlap at all, anchor or not. This is how a pin split out of the open
+  // group is recognised as still being part of what the panel is describing.
+  const isWithinSelection = (group) => {
+    if (!selectedSite) return false;
+    return groupContainsAnySite(group, selectedSite.members || [selectedSite]);
   };
 
   const isSiteSelected = (group) => groupContainsAnySite(group, selectedSites);
@@ -233,17 +278,35 @@ export default function NodeMap({
   );
 
   /*
-   * One pin per *group*. With clusterRadiusKm at 0 a group is exactly one site, so
-   * this is the previous behaviour verbatim; above 0, sites within that many
-   * kilometres share a pin that carries their count.
+   * Quantised camera, purely to bound how often the clustering runs.
    *
-   * Memoised on the data and the radius alone — not on selection or zoom — so the
-   * group objects (and therefore the pin keys) survive hovering, selecting and
-   * zooming. Rebuilding them per render would replay every pin's entrance.
+   * The radius is derived from the zoom, so without this a flyTo would re-cluster
+   * on every animation frame. Half a zoom level is finer than the granularity at
+   * which groups actually come apart, and latitude only enters through a cosine,
+   * so 5° steps are well inside the noise.
+   */
+  const zoomStep = Math.round((zoom || 0) * 2) / 2;
+  const latitudeStep = Math.round((centerLatitude || 0) / 5) * 5;
+
+  const effectiveRadiusKm = useMemo(
+    () => clusterRadiusForZoom(clusterRadiusKm, zoomStep, latitudeStep),
+    [clusterRadiusKm, zoomStep, latitudeStep],
+  );
+
+  /*
+   * One pin per *group*. With clusterRadiusKm at 0 a group is exactly one site, so
+   * this is the previous behaviour verbatim; above 0, sites still overlapping at
+   * this zoom share a pin that carries their count.
+   *
+   * Memoised on the data and the working radius — not on selection or hover — so
+   * the group objects (and therefore the pin keys) survive hovering and selecting.
+   * They deliberately do NOT survive a zoom that splits a group: that change of
+   * identity is the feature, and React remounting those markers is how the extra
+   * pins animate in.
    */
   const groups = useMemo(
-    () => clusterSites(sites, { radiusKm: clusterRadiusKm }),
-    [sites, clusterRadiusKm],
+    () => clusterSites(sites, { radiusKm: effectiveRadiusKm }),
+    [sites, effectiveRadiusKm],
   );
 
   const hasMergedPins = useMemo(
@@ -298,6 +361,14 @@ export default function NodeMap({
             // Ctrl/Cmd + Click for multi-select, regular click for single select
             if (e.originalEvent.ctrlKey || e.originalEvent.metaKey) {
               toggleSiteSelection(group);
+            } else if (isWithinSelection(group) && !isGroupSelected(group)) {
+              /*
+               * A pin that the zoom split out of the group already open in the
+               * panel. Fly to it, but leave the selection alone: narrowing the
+               * panel to this one site would throw away the member list that
+               * says what else is here, which is the reason the group exists.
+               */
+              if (onEnterSite) onEnterSite(group);
             } else {
               setSelectedSite(group);
               if (onEnterSite) onEnterSite(group);
@@ -358,15 +429,20 @@ export default function NodeMap({
 
 
   /*
-   * No hover card while drilled into a site, and none for the pin that is
-   * already open — the overlay panel is showing all of this and more.
+   * No hover card for the pin that is already open — the overlay panel is showing
+   * all of this and more.
    *
    * Compared by id rather than by reference: `selectedSite` can be a member site
    * chosen from the panel's picker while `hoveredSite` is the merged group drawing
    * that member's pin, and those are two different objects for one pin.
+   *
+   * Cards used to be suppressed outright in site mode, on the grounds that the
+   * panel described the one site you were looking at. That stops being true once a
+   * merged group splits at street level: its siblings are then on screen as pins
+   * the panel does not single out, and without a card there is nothing to say which
+   * is which.
    */
-  const hoverCardSite =
-    hoveredSite && !isSiteMode && !isGroupSelected(hoveredSite) ? hoveredSite : null;
+  const hoverCardSite = hoveredSite && !isGroupSelected(hoveredSite) ? hoveredSite : null;
 
   // Lift the card clear of the pin it describes, at whatever size this zoom draws it.
   const hoveredPinHeight =
@@ -387,6 +463,7 @@ export default function NodeMap({
           onClick={onMapClick}
           onMove={(e) => {
             setZoom(e.viewState?.zoom ?? zoom);
+            setCenterLatitude(e.viewState?.latitude ?? centerLatitude);
           }}
 
         >
@@ -427,7 +504,6 @@ export default function NodeMap({
           <Legend
             selectedSites={selectedSites}
             selectionLegendName={selectionLegendName}
-            mergeRadiusKm={clusterRadiusKm}
             hasMergedPins={hasMergedPins}
           />
         )}
