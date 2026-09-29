@@ -62,6 +62,22 @@ function decodeArcs(topology) {
 
 const round = (value) => Math.round(value * 1000) / 1000;
 
+// Keep longitudes continuous across the antimeridian (Mapbox fills rings as planar).
+function unwrap(points) {
+  for (let i = 1; i < points.length; i++) {
+    while (points[i][0] - points[i - 1][0] > 180) points[i][0] -= 360;
+    while (points[i][0] - points[i - 1][0] < -180) points[i][0] += 360;
+  }
+  // A ring around a pole (Antarctica) no longer closes on itself: close it via the pole.
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (last[0] !== first[0]) {
+    const pole = first[1] < 0 ? -90 : 90;
+    points.push([last[0], pole], [first[0], pole], [first[0], first[1]]);
+  }
+  return points;
+}
+
 function ring(arcIndexes, arcs) {
   const points = [];
   for (const index of arcIndexes) {
@@ -72,7 +88,7 @@ function ring(arcIndexes, arcs) {
       points.push([round(point[0]), round(point[1])]);
     });
   }
-  return points;
+  return unwrap(points);
 }
 
 function toGeometry(geometry, arcs) {
