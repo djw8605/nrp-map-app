@@ -171,7 +171,7 @@ Both scripts always run; the Job is marked failed if either fails.
 | `components/usage/UsageLegend.js` | **New.** Single-swatch legend with the window dates. |
 | `components/usage/UsagePanelContent.js` | **New.** `UsageOverviewContent` and `UsageRegionContent` for `MapOverlayPanel`. |
 | `components/usage/UsageHoverCard.js` | **New.** Region name + institution count. |
-| `lib/usageRegions.js` | **New.** Pure helpers: sorted region list, highlighted-code list, region lookup, summary counts. |
+| `lib/usageRegions.js` | **New.** Pure helpers: sorted region list, highlighted-code list, region lookup, summary counts, point fallback for regions without a shape. |
 | `lib/usageRegions.checks.js` | **New.** Assertions-as-data in the style of `lib/siteClusters.checks.js`, runnable with plain `node`. |
 | `components/nodeMap.js` | Accept `view` (`'contributors'` default) and `usageLayers` (rendered inside `<Map>`). In usage view, skip pins, the site hover card and the contributors `Legend`. The expand link carries `?view=`. |
 | `pages/map.js`, `pages/index.js` | Hold the view state, read `?view=` and `?toggle=`, render the toggle, fetch usage data lazily, swap panel content. |
@@ -206,6 +206,15 @@ Both scripts always run; the Job is marked failed if either fails.
   beneath it, formatted from `window`.
 - **Click** selects the region; Escape or a click on empty map clears it.
 
+#### Regions without a shape
+
+A region in the usage JSON whose code has no feature in `usage-regions.json` is
+drawn as a small circle (same accent colour, fixed pixel radius) at the mean
+`lat`/`lng` of its institutions. It shares the fill layer's hover card, click and
+selected behaviour, and appears in the panel like any other region. The lookup is
+a pure helper in `lib/usageRegions.js`, computed client-side from the loaded shapes,
+so a newly added small country needs no rebuild of the shapes file.
+
 ### Panel
 
 Uses `MapOverlayPanel` unchanged (so it is a bottom sheet in small containers).
@@ -227,11 +236,13 @@ source data changes.
   `US-XX`.
 - **US territories** (FIPS 60, 66, 69, 72, 78): from the same us-atlas file,
   tagged with ISO codes `AS`, `GU`, `MP`, `PR`, `VI`.
-- **Other countries:** world-atlas `countries-50m.json` (the 110m file lacks
-  Singapore, which has an NRP user today), ISO numeric → alpha-2, with the US and
-  the five territories removed.
-- Each feature carries `{ code, name }` only. Simplified so the GeoJSON is at most
-  ~800 KB uncompressed; the build prints the size.
+- **Other countries:** world-atlas `countries-110m.json` (the smallest file),
+  ISO numeric → alpha-2, with the US and the five territories removed.
+- Each feature carries `{ code, name }` only. No further simplification; the build
+  prints the size (expected a few hundred KB uncompressed).
+- **Countries too small for the 110m file** (Singapore has an NRP user today) have
+  no polygon. Accuracy for them is not a goal; they must still be visible and
+  clickable. See "Regions without a shape" below.
 - The build script is a dev-time tool: it may use `npx` packages (e.g. mapshaper,
   topojson-client) but adds nothing to the dashboard's `package.json`
   dependencies.
@@ -272,7 +283,7 @@ exactly what they load today.
   `row_count >= limit` guard. Then one `--dry-run` against the live API and ROR, and
   a review of the resulting JSON (institution count, region count, `unmapped`
   list).
-- **Dashboard helpers:** `lib/usageRegions.checks.js` run with `node`.
+- **Dashboard helpers:** `lib/usageRegions.checks.js` run with `node`, including the point fallback for a region with no shape (Singapore).
 - **Map:** in the Browser pane against the dev server, verified through the map
   instance (layer present, `queryRenderedFeatures` returns filled regions, click
   sets the selected region, panel lists the right names), not through screenshots
