@@ -1,0 +1,10 @@
+{
+  "CAIDA": { "region": "US-CA", "regionName": "California", "lat": 32.881, "lng": -117.238, "ror": null },
+  "CENIC": { "region": "US-CA", "regionName": "California", "lat": 33.917, "lng": -118.012, "ror": null },
+  "KanREN": { "region": "US-KS", "regionName": "Kansas", "lat": 38.972, "lng": -95.235, "ror": null },
+  "Los Altos High School": { "region": "US-CA", "regionName": "California", "lat": 37.36, "lng": -122.108, "ror": null },
+  "NJEdge": { "region": "US-NJ", "regionName": "New Jersey", "lat": 40.736, "lng": -74.172, "ror": null },
+  "OneNet": { "region": "US-OK", "regionName": "Oklahoma", "lat": 35.468, "lng": -97.516, "ror": null },
+  "Pacific Wave": { "region": "US-WA", "regionName": "Washington", "lat": 47.606, "lng": -122.332, "ror": null },
+  "SoX": { "region": "US-GA", "regionName": "Georgia", "lat": 33.776, "lng": -84.398, "ror": null }
+}

@@ -3,6 +3,20 @@ Node Generation Service
 
 This service generates the nodes.json file by fetching data from Kubernetes and Netbox, then uploads it to Cloudflare R2 storage.
 
+It also runs `generate-usage.js`, which publishes `usage-by-region.json`: every US
+state and country home to an institution that used NRP in the last three years,
+with the institutions in each (and their CPU, GPU and LLM totals, for future use).
+
+- Usage comes from the public accounting API
+  (`https://nrp-accounting-mcp.nrp-nautilus.io/openapi`, override with
+  `ACCOUNTING_API_URL`). No token is needed.
+- Each institution is placed in a region by, in order: `institution-overrides.json`,
+  the previously published file (`USAGE_PUBLIC_URL`, only ROR matches are reused),
+  then the ROR affiliation API. Anything left is listed under `unmapped` in the
+  output and in the job log — add an override for it.
+- `node generate-usage.js --dry-run` writes `./usage-by-region.json` instead of
+  uploading. `npm test` runs the unit tests for `usage-lib.js`.
+
 ## Requirements
 
 1. Netbox API token (read-only)
