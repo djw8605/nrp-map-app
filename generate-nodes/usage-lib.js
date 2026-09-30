@@ -104,17 +104,26 @@ function regionFromRorOrganization(org) {
   };
 }
 
-// ROR's affiliation endpoint marks a confident match as `chosen`.
+/*
+ * ROR's affiliation endpoint marks a confident match as `chosen`. Without one, an
+ * exact name is accepted only if every organisation with that name is in the same
+ * region: ROR returns same-named organisations (American University in Managua
+ * and in Washington) as tied results in no stable order.
+ */
 function pickRorMatch(items, cleanedName) {
   if (!Array.isArray(items)) return null;
   const chosen = items.find((item) => item.chosen);
   if (chosen) return chosen.organization;
 
   const wanted = cleanedName.toLowerCase();
-  const exact = items.find((item) =>
-    (item.organization?.names || []).some((name) => (name.value || '').toLowerCase() === wanted),
-  );
-  return exact ? exact.organization : null;
+  const exact = items
+    .map((item) => item.organization)
+    .filter((org) => (org?.names || []).some((name) => (name.value || '').toLowerCase() === wanted));
+  if (exact.length === 0) return null;
+
+  const regionOf = (org) => regionFromRorOrganization(org)?.region ?? null;
+  const region = regionOf(exact[0]);
+  return exact.every((org) => regionOf(org) === region) ? exact[0] : null;
 }
 
 function resolveFromOverride(overrides, name) {
@@ -205,15 +214,19 @@ function buildUsageDocument({ window, usageByInstitution, resolved, unattributed
       ror: hit.ror, region: hit.region, lat: hit.lat, lng: hit.lng, match: hit.match, usage,
     };
     if (!regions[hit.region]) {
-      regions[hit.region] = { name: hit.regionName, institutions: [], totals: emptyUsage() };
+      regions[hit.region] = { name: hit.regionName, institutions: new Set(), totals: emptyUsage() };
     }
-    regions[hit.region].institutions.push(name);
+    // The panel shows display names, so "X" and "X / 0087239" are listed once.
+    regions[hit.region].institutions.add(cleanInstitutionName(name));
     addUsage(regions[hit.region].totals, usage);
   }
 
   // Sorted keys keep the published file diffable run to run.
   const sortedRegions = Object.fromEntries(
-    Object.keys(regions).sort().map((code) => [code, regions[code]]),
+    Object.keys(regions).sort().map((code) => [
+      code,
+      { ...regions[code], institutions: [...regions[code].institutions].sort(byName) },
+    ]),
   );
 
   return {
@@ -225,6 +238,22 @@ function buildUsageDocument({ window, usageByInstitution, resolved, unattributed
     unmapped,
     unattributed,
   };
+}
+
+const countMapped = (doc) => {
+  const institutions = doc?.institutions;
+  return institutions && typeof institutions === 'object' ? Object.keys(institutions).length : null;
+};
+
+/*
+ * A run that maps fewer than half as many institutions as the published file is
+ * more likely a broken lookup than real change, so it is not published.
+ */
+function checkMappedDrop(previous, doc) {
+  const previousCount = countMapped(previous);
+  const currentCount = countMapped(doc) ?? 0;
+  const ok = previousCount === null || currentCount * 2 >= previousCount;
+  return { ok, previousCount, currentCount };
 }
 
 module.exports = {
@@ -239,4 +268,5 @@ module.exports = {
   pickRorMatch,
   resolveInstitutions,
   buildUsageDocument,
+  checkMappedDrop,
 };

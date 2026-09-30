@@ -72,6 +72,31 @@ test('pickRorMatch prefers the chosen item, then an exact name, else null', () =
   assert.equal(lib.pickRorMatch(undefined, 'Anything'), null);
 });
 
+test('pickRorMatch rejects an exact name shared by organisations in different regions', () => {
+  const at = (id, value, loc) => ({ chosen: false, organization: { ...ror(id, loc), names: [{ value }] } });
+  const managua = at('https://ror.org/038e47q18', 'American University', { country_code: 'NI', country_name: 'Nicaragua' });
+  const dc = at('https://ror.org/052w4zt36', 'American University', {
+    country_code: 'US', country_subdivision_code: 'DC', country_subdivision_name: 'District of Columbia',
+  });
+  const unrelated = at('x', 'American Rivers', { country_code: 'US', country_subdivision_code: 'DC' });
+  // ROR returns such ties in no stable order, so neither order may pick one.
+  assert.equal(lib.pickRorMatch([managua, dc, unrelated], 'American University'), null);
+  assert.equal(lib.pickRorMatch([dc, managua], 'american university'), null);
+  // `chosen` still wins over an ambiguous name.
+  assert.equal(lib.pickRorMatch([managua, { ...dc, chosen: true }], 'American University').id, 'https://ror.org/052w4zt36');
+});
+
+test('pickRorMatch accepts several exact names when they share one region', () => {
+  const at = (id, value, loc) => ({ chosen: false, organization: { ...ror(id, loc), names: [{ value }] } });
+  const nebraska = { country_code: 'US', country_subdivision_code: 'NE', country_subdivision_name: 'Nebraska' };
+  const first = at('first', 'Example College', nebraska);
+  const second = at('second', 'EXAMPLE COLLEGE', { ...nebraska, lat: 41, lng: -96 });
+  assert.equal(lib.pickRorMatch([first, second], 'Example College').id, 'first');
+  // An exact match with no usable location cannot be told apart, so it is ambiguous too.
+  const nowhere = at('nowhere', 'Example College', { country_code: 'US' });
+  assert.equal(lib.pickRorMatch([first, nowhere], 'Example College'), null);
+});
+
 test('resolveInstitutions applies override, then cache (ror only), then ROR', async () => {
   const overrides = { CENIC: { region: 'US-CA', regionName: 'California', lat: 33.9, lng: -118.0, ror: null } };
   const previous = {
@@ -122,18 +147,22 @@ test('buildUsageDocument rolls institutions into sorted regions and lists the un
       'University of Nebraska–Lincoln': usage(10, 2, 3),
       'Yonsei University': usage(4),
       'Mystery Lab': usage(5),
+      'Georgia Institute of Technology': usage(2),
+      'Georgia Institute of Technology / 0087239': usage(3),
     },
     resolved: {
       'Wayne State College': { ror: 'r1', region: 'US-NE', regionName: 'Nebraska', lat: 42.2, lng: -97.0, match: 'ror' },
       'University of Nebraska–Lincoln': { ror: 'r2', region: 'US-NE', regionName: 'Nebraska', lat: 40.8, lng: -96.7, match: 'ror' },
       'Yonsei University': { ror: 'r3', region: 'KR', regionName: 'South Korea', lat: 37.5, lng: 126.9, match: 'ror' },
       'Mystery Lab': null,
+      'Georgia Institute of Technology': { ror: 'r4', region: 'US-GA', regionName: 'Georgia', lat: 33.8, lng: -84.4, match: 'ror' },
+      'Georgia Institute of Technology / 0087239': { ror: 'r4', region: 'US-GA', regionName: 'Georgia', lat: 33.8, lng: -84.4, match: 'ror' },
     },
   });
 
   assert.equal(doc.version, 1);
   assert.equal(doc.generated_at, '2026-09-29T06:00:00.000Z');
-  assert.deepEqual(Object.keys(doc.regions), ['KR', 'US-NE']);
+  assert.deepEqual(Object.keys(doc.regions), ['KR', 'US-GA', 'US-NE']);
   assert.deepEqual(doc.regions['US-NE'], {
     name: 'Nebraska',
     institutions: ['University of Nebraska–Lincoln', 'Wayne State College'],
@@ -142,7 +171,24 @@ test('buildUsageDocument rolls institutions into sorted regions and lists the un
   assert.deepEqual(doc.institutions['Yonsei University'], {
     ror: 'r3', region: 'KR', lat: 37.5, lng: 126.9, match: 'ror', usage: usage(4),
   });
+  // The panel lists display names once; the raw keys stay in `institutions`.
+  assert.deepEqual(doc.regions['US-GA'], {
+    name: 'Georgia', institutions: ['Georgia Institute of Technology'], totals: usage(5),
+  });
+  assert.equal(doc.institutions['Georgia Institute of Technology / 0087239'].region, 'US-GA');
   assert.equal(doc.institutions['Mystery Lab'], undefined);
   assert.deepEqual(doc.unmapped, [{ name: 'Mystery Lab', usage: usage(5) }]);
   assert.deepEqual(doc.unattributed, usage(1));
+});
+
+test('checkMappedDrop refuses a run that maps under half of the previous file', () => {
+  const doc = (count) => ({
+    institutions: Object.fromEntries(Array.from({ length: count }, (_, i) => [`I${i}`, { region: 'US-NE' }])),
+  });
+  assert.deepEqual(lib.checkMappedDrop(doc(100), doc(50)), { ok: true, previousCount: 100, currentCount: 50 });
+  assert.deepEqual(lib.checkMappedDrop(doc(100), doc(49)), { ok: false, previousCount: 100, currentCount: 49 });
+  assert.deepEqual(lib.checkMappedDrop(doc(3), doc(200)), { ok: true, previousCount: 3, currentCount: 200 });
+  // No previous file (first run, or unreadable): nothing to compare against.
+  assert.deepEqual(lib.checkMappedDrop(null, doc(1)), { ok: true, previousCount: null, currentCount: 1 });
+  assert.deepEqual(lib.checkMappedDrop({ institutions: 'bad' }, doc(1)), { ok: true, previousCount: null, currentCount: 1 });
 });

@@ -119,6 +119,16 @@ async function main() {
   if (regionCount === 0) {
     throw new Error('No institution resolved to a region; refusing to publish an empty map');
   }
+  const drop = lib.checkMappedDrop(previous, doc);
+  if (drop.previousCount !== null) {
+    console.log(`Mapped institutions: ${drop.currentCount} now, ${drop.previousCount} in the previous file`);
+  }
+  if (!drop.ok) {
+    throw new Error(
+      `Only ${drop.currentCount} institutions mapped, under half of the previous file's ${drop.previousCount}; ` +
+      'refusing to publish',
+    );
+  }
 
   if (dryRun) {
     fs.writeFileSync(path.join(__dirname, OUTPUT_KEY), JSON.stringify(doc, null, 2));
