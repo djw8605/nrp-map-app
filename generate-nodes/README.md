@@ -16,6 +16,23 @@ with the institutions in each (and their CPU, GPU and LLM totals, for future use
   output and in the job log — add an override for it.
 - `node generate-usage.js --dry-run` writes `./usage-by-region.json` instead of
   uploading. `npm test` runs the unit tests for `usage-lib.js`.
+- A run that maps fewer than half as many institutions as the previously
+  published file exits non-zero without publishing; the log shows both counts.
+
+### Rollout
+
+The CronJob runs `generate-usage.js` only once its manifest is re-applied, so
+after this change lands:
+
+1. Merge to `main` (the job clones the repository on every run).
+2. Re-apply the manifests: `kubectl apply -k generate-nodes/k8s/` (needs
+   `k8s/secrets.env`), or just `kubectl apply -f generate-nodes/k8s/cronjob.yaml`.
+3. Publish once without waiting for the schedule:
+   `kubectl create job --from=cronjob/generate-nodes usage-first-run`.
+4. Confirm `https://dash-api.nrp.ai/usage-by-region.json` is served.
+
+Until the file is published, the dashboard's Usage view shows "Usage data
+unavailable"; the Contributors view is unaffected.
 
 ## Requirements
 

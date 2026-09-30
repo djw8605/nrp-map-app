@@ -86,17 +86,22 @@ state (postal code, including `US-DC`), ISO 3166-1 alpha-2 for everything else.
       file is not an error; everything is resolved fresh.
    3. **ROR** — `GET https://api.ror.org/v2/organizations?affiliation=<name>` with
       the name cleaned first (text after `" / "` removed, whitespace trimmed). Take
-      the item with `chosen: true`; otherwise an item one of whose `names` equals
-      the cleaned name case-insensitively; otherwise no match. At most 4 requests in
-      flight, 3 retries with backoff.
+      the item with `chosen: true`; otherwise the items one of whose `names` equals
+      the cleaned name case-insensitively, **only if they all resolve to the same
+      region** (then the first of them); otherwise no match. ROR returns
+      same-named organisations as tied results in no stable order (American
+      University is in Managua and in Washington), so an ambiguous name goes to
+      `unmapped` and needs an override. At most 4 requests in flight, 3 retries
+      with backoff.
    4. **Unmapped** — listed in `unmapped` with its usage.
 
    Region code from the ROR record's first location (`geonames_details`):
    `country_code == "US"` → `"US-" + country_subdivision_code`; otherwise the
    `country_code` (so Guam is `GU`, Puerto Rico `PR`). `lat`/`lng` come from the
    same location.
-5. **Roll up** into regions: for each region, the sorted institution names and the
-   summed usage. Region `name` comes from ROR (`country_subdivision_name` for US
+5. **Roll up** into regions: for each region, the sorted, de-duplicated
+   **cleaned** institution names (so `"X"` and `"X / 0087239"` are listed once as
+   `"X"`) and the summed usage. Region `name` comes from ROR (`country_subdivision_name` for US
    states, `country_name` otherwise), or from the override.
 6. **Publish** `usage-by-region.json` to R2 bucket `nrp-dashboard`, `public-read`,
    `application/json`. With `--dry-run`, write it to `./usage-by-region.json`
@@ -138,6 +143,11 @@ from the previous file — there is no other cache to clear.)
 
 `match` is one of `ror`, `override`. Usage values are numbers (floats); the job does not round them.
 
+`institutions` is keyed by the raw accounting name (it is also the cache), while
+`regions[].institutions` holds cleaned display names, which are not necessarily
+keys of `institutions`. To find a region's institution entries, filter
+`institutions` by `region`.
+
 ### Failure handling
 
 | Failure | Behaviour |
@@ -147,6 +157,7 @@ from the previous file — there is no other cache to clear.)
 | Previous file missing or unreadable | Log it, resolve every name fresh. |
 | ROR unreachable for a name | That name goes to `unmapped` for this run; retried next run. |
 | Zero institutions resolved to a region | Exit non-zero, upload nothing (protects against publishing an empty map). |
+| Fewer than half as many institutions mapped as in the previous file | Exit non-zero, upload nothing; log both counts. No previous file: no check. |
 | R2 upload fails | Exit non-zero. |
 
 ### CronJob
@@ -210,7 +221,8 @@ Both scripts always run; the Job is marked failed if either fails.
 
 A region in the usage JSON whose code has no feature in `usage-regions.json` is
 drawn as a small circle (same accent colour, fixed pixel radius) at the mean
-`lat`/`lng` of its institutions. It shares the fill layer's hover card, click and
+`lat`/`lng` of its institutions (the `institutions` entries whose `region` is that
+code). It shares the fill layer's hover card, click and
 selected behaviour, and appears in the panel like any other region. The lookup is
 a pure helper in `lib/usageRegions.js`, computed client-side from the loaded shapes,
 so a newly added small country needs no rebuild of the shapes file.

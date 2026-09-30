@@ -61,6 +61,9 @@ clicking a region lists its institutions.
   `node scripts/build-usage-regions.mjs` (committed; rebuild only if the sources
   change). Countries too small for the outline file are drawn as dots.
 - Checks: `node scripts/run-usage-region-checks.mjs`.
+- Rollout: the file exists only after the re-applied CronJob has run once; see
+  "Rollout" in `generate-nodes/README.md`. Until then the Usage view shows "Usage
+  data unavailable".
 - Local development: put a `generate-usage.js --dry-run` output in
   `public/dev/usage-by-region.json` and set `USAGE_PUBLIC_URL` to a URL that
   serves that file, such as `http://localhost:3000/dev/usage-by-region.json`
@@ -143,10 +146,13 @@ The deployment includes RBAC configuration:
 
 ### Website (Next.js)
 - `R2_PUBLIC_URL` - Public URL for the Cloudflare R2 bucket (optional, defaults to `https://nrp-dashboard.r2.dev/nodes.json`)
+- `USAGE_PUBLIC_URL` - Public URL of `usage-by-region.json`, read by `/api/usageByRegion` (optional, defaults to `https://dash-api.nrp.ai/usage-by-region.json`)
 
 ### Node Generator (Kubernetes)
 - `NETBOX_TOKEN` - Netbox API token
 - `CLOUDFLARE_ID` - Cloudflare account ID
 - `CLOUDFLARE_ACCESS_KEY` - Cloudflare R2 access key ID
 - `CLOUDFLARE_SECRET_ACCESS_KEY` - Cloudflare R2 secret access key
+- `USAGE_PUBLIC_URL` - Public URL of the previously published `usage-by-region.json`, used by `generate-usage.js` as its ROR cache and for the publish guard (optional, defaults to `https://dash-api.nrp.ai/usage-by-region.json`)
+- `ACCOUNTING_API_URL` - Base URL of the accounting OpenAPI bridge read by `generate-usage.js` (optional, defaults to `https://nrp-accounting-mcp.nrp-nautilus.io/openapi`)
 
