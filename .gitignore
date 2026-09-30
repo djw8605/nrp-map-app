@@ -30,3 +30,9 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+
+# generate-usage.js --dry-run output
+/generate-nodes/usage-by-region.json
+
+# local fixture for /api/usageByRegion (see .env.development.local)
+/public/dev/

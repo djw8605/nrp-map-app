@@ -8,8 +8,12 @@ import { faChevronDown, faChevronUp, faXmark, faArrowLeft } from '@fortawesome/f
  * container, NOT the viewport — /map is embedded in third-party iframes whose
  * height we do not control.
  */
-const COMPACT_MAX_HEIGHT = 420;
-const COMPACT_MAX_WIDTH = 640;
+export const COMPACT_MAX_HEIGHT = 420;
+export const COMPACT_MAX_WIDTH = 640;
+
+export const isCompactContainer = (element) =>
+  Boolean(element) &&
+  (element.clientHeight < COMPACT_MAX_HEIGHT || element.clientWidth < COMPACT_MAX_WIDTH);
 
 /**
  * Floating glass panel over the map canvas.
@@ -27,9 +31,20 @@ export default function MapOverlayPanel({
   onClose,
   onBack,
   backLabel = 'Back to overview',
+  // When this changes to a non-null value the panel expands, so a collapsed
+  // bottom sheet opens to show what the user just clicked on the map. Any change
+  // also scrolls the content back to the top: the new content is a different
+  // page, not a continuation of the one that was scrolled.
+  expandKey,
+  // Tailwind max-height for the bottom sheet. The usage view passes a shorter
+  // one so the region it just selected stays visible above the sheet.
+  compactMaxHeightClass = 'max-h-[85%]',
+  // Lets a caller move focus to the heading, e.g. after a keyboard selection.
+  titleRef,
   children,
 }) {
   const panelRef = useRef(null);
+  const contentRef = useRef(null);
   const [isCompact, setIsCompact] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -43,8 +58,7 @@ export default function MapOverlayPanel({
     if (!container || typeof ResizeObserver === 'undefined') return undefined;
 
     const measure = () => {
-      const compact =
-        container.clientHeight < COMPACT_MAX_HEIGHT || container.clientWidth < COMPACT_MAX_WIDTH;
+      const compact = isCompactContainer(container);
       setIsCompact((previous) => (previous === compact ? previous : compact));
     };
 
@@ -59,10 +73,15 @@ export default function MapOverlayPanel({
     setIsExpanded(!isCompact);
   }, [isCompact]);
 
+  useEffect(() => {
+    if (expandKey != null) setIsExpanded(true);
+    contentRef.current?.scrollTo?.({ top: 0 });
+  }, [expandKey]);
+
   const toggleExpanded = useCallback(() => setIsExpanded((value) => !value), []);
 
   const placement = isCompact
-    ? 'inset-x-2 bottom-2 max-h-[85%]'
+    ? `inset-x-2 bottom-2 ${compactMaxHeightClass}`
     : `top-3 bottom-3 w-[360px] ${position === 'left' ? 'left-3' : 'right-3'}`;
 
   /*
@@ -100,7 +119,11 @@ export default function MapOverlayPanel({
             {titleNode ?? (
               <>
                 {title ? (
-                  <h2 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">
+                  <h2
+                    ref={titleRef}
+                    tabIndex={titleRef ? -1 : undefined}
+                    className="truncate text-sm font-semibold text-slate-900 focus:outline-none dark:text-slate-50"
+                  >
                     {title}
                   </h2>
                 ) : null}
@@ -144,6 +167,7 @@ export default function MapOverlayPanel({
 
         {isExpanded ? (
           <div
+            ref={contentRef}
             className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 ${hasHeader ? '' : 'pt-4'}`}
           >
             {children}

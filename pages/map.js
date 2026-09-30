@@ -6,6 +6,13 @@ import MapOverlayPanel from "../components/map/MapOverlayPanel";
 import { MapOverviewContent, MapSiteContent } from "../components/map/MapPanelContent";
 import { SiteSelectBox } from "../components/map/SiteSelect";
 import { useSiteDrillIn } from "../components/map/useSiteDrillIn";
+import MapViewToggle from "../components/map/MapViewToggle";
+import { useMapView } from "../components/map/useMapView";
+import UsageMapLayer from "../components/usage/UsageMapLayer";
+import UsageLegend from "../components/usage/UsageLegend";
+import UsagePanel from "../components/usage/UsagePanel";
+import { useUsageData } from "../components/usage/useUsageData";
+import { useUsageSelection } from "../components/usage/useUsageSelection";
 import { fetcher } from "../lib/fetcher";
 import { DEFAULT_CLUSTER_RADIUS_KM, clusterSites, findGroupForSite } from "../lib/siteClusters";
 
@@ -45,6 +52,21 @@ export default function MapPage() {
   });
 
   const showPanel = router.query.panel !== '0';
+  const { view, setView, showToggle } = useMapView();
+  const isUsageView = view === 'usage';
+  const usageSelection = useUsageSelection();
+  const clearUsageSelection = usageSelection.clear;
+  const usageData = useUsageData(isUsageView);
+
+  // The usage map is a zoomed-out view, so leave a drilled-in site first, and
+  // drop the selection that belongs to the view being left.
+  const handleViewChange = useCallback((nextView) => {
+    if (isSiteMode) exitToOverview();
+    setSelectedSite(null);
+    setFocusedSiteId(null);
+    clearUsageSelection();
+    setView(nextView);
+  }, [isSiteMode, exitToOverview, setView, clearUsageSelection]);
 
   const handleRegexChange = useCallback((pattern) => {
     setRegexPattern(pattern);
@@ -104,8 +126,32 @@ export default function MapPage() {
         showExpandLink={false}
         reservePanelSpace={showPanel}
         clusterRadiusKm={DEFAULT_CLUSTER_RADIUS_KM}
+        view={view}
+        mapChildren={isUsageView ? (
+          <UsageMapLayer
+            usage={usageData.usage}
+            shapes={usageData.shapes}
+            usageSelection={usageSelection}
+            panelShown={showPanel}
+          />
+        ) : null}
       >
-        {showPanel ? (
+        {showToggle ? <MapViewToggle view={view} onChange={handleViewChange} /> : null}
+        {isUsageView ? (
+          <>
+            <UsageLegend usage={usageData.usage} error={usageData.error} isLoading={usageData.isLoading} />
+            {showPanel ? (
+              <UsagePanel
+                usage={usageData.usage}
+                error={usageData.error}
+                isLoading={usageData.isLoading}
+                onRetry={usageData.retry}
+                usageSelection={usageSelection}
+              />
+            ) : null}
+          </>
+        ) : null}
+        {view === 'contributors' && showPanel ? (
           selectedSite ? (
             /* One picker in the header serves as the title and the switcher; see
                pages/index.js, including why a merged pin passes its primary. */

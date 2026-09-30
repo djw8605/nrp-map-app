@@ -11,6 +11,13 @@ import MapOverlayPanel from '../components/map/MapOverlayPanel'
 import { MapOverviewContent, MapSiteContent } from '../components/map/MapPanelContent'
 import { SiteSelectBox } from '../components/map/SiteSelect'
 import { useSiteDrillIn } from '../components/map/useSiteDrillIn'
+import MapViewToggle from '../components/map/MapViewToggle'
+import { useMapView } from '../components/map/useMapView'
+import UsageMapLayer from '../components/usage/UsageMapLayer'
+import UsageLegend from '../components/usage/UsageLegend'
+import UsagePanel from '../components/usage/UsagePanel'
+import { useUsageData } from '../components/usage/useUsageData'
+import { useUsageSelection } from '../components/usage/useUsageSelection'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { Card } from '@tremor/react'
 import useSWR from 'swr'
@@ -80,6 +87,22 @@ export default function Home() {
     enterSite(site);
   }, [siteGroups, enterSite, exitToOverview]);
 
+  const { view, setView, showToggle } = useMapView();
+  const isUsageView = view === 'usage';
+  const usageSelection = useUsageSelection();
+  const clearUsageSelection = usageSelection.clear;
+  const usageData = useUsageData(isUsageView);
+
+  // The usage map is a zoomed-out view, so leave a drilled-in site first, and
+  // drop the selection that belongs to the view being left.
+  const handleViewChange = useCallback((nextView) => {
+    if (isSiteMode) exitToOverview();
+    setSelectedSite(null);
+    setFocusedSiteId(null);
+    clearUsageSelection();
+    setView(nextView);
+  }, [isSiteMode, exitToOverview, setView, clearUsageSelection]);
+
   // Handle regex pattern change for selection
   const handleRegexChange = (pattern) => {
     setRegexPattern(pattern);
@@ -142,8 +165,29 @@ export default function Home() {
               focusedSiteId={focusedSiteId}
               onExitOverview={exitToOverview}
               clusterRadiusKm={DEFAULT_CLUSTER_RADIUS_KM}
+              view={view}
+              mapChildren={isUsageView ? (
+                <UsageMapLayer
+                  usage={usageData.usage}
+                  shapes={usageData.shapes}
+                  usageSelection={usageSelection}
+                />
+              ) : null}
             >
-              {selectedSite ? (
+              {showToggle ? <MapViewToggle view={view} onChange={handleViewChange} /> : null}
+              {isUsageView ? (
+                <>
+                  <UsageLegend usage={usageData.usage} error={usageData.error} isLoading={usageData.isLoading} />
+                  <UsagePanel
+                    usage={usageData.usage}
+                    error={usageData.error}
+                    isLoading={usageData.isLoading}
+                    onRetry={usageData.retry}
+                    usageSelection={usageSelection}
+                  />
+                </>
+              ) : null}
+              {view === 'contributors' ? (selectedSite ? (
                 /* The picker in the header is the site's title: it names the open
                    site and switches to another. onClose is omitted deliberately —
                    it did exactly what onBack does. */
@@ -185,7 +229,7 @@ export default function Home() {
                     regexError={regexError}
                   />
                 </MapOverlayPanel>
-              )}
+              )) : null}
             </NodeMap>
           </div>
         </div>

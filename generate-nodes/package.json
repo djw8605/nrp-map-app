@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "test": "node --test"
+  },
   "dependencies": {
     "@kubernetes/client-node": "^0.16.3",
     "aws-sdk": "^2.1691.0",

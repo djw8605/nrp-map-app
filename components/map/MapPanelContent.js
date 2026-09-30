@@ -9,16 +9,17 @@ import {
 } from '../mapInfoPanel';
 import { SiteMultiSelectBox, SiteSelectBox } from './SiteSelect';
 import ClusterMemberList from './ClusterMemberList';
+import NrpPanelIntro from './NrpPanelIntro';
 import { summarizeSites } from '../../lib/siteClusters';
 
 // border-[1px] rather than border: see the note in ./SiteSelect.js — the global
 // `.border` rule in globals.css would otherwise override these colours.
-const INPUT_CLASS =
+export const INPUT_CLASS =
   'w-full px-3 py-2 text-sm border-[1px] border-solid border-slate-300 dark:border-slate-600 rounded-lg ' +
   'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 ' +
   'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors';
 
-const LABEL_CLASS = 'text-sm text-slate-500 dark:text-slate-400 block mb-1.5';
+export const LABEL_CLASS = 'text-sm text-slate-500 dark:text-slate-400 block mb-1.5';
 
 /*
  * Overview variant — the NRP logo leads, then the site pickers and regex filter.
@@ -40,29 +41,7 @@ export function MapOverviewContent({
 }) {
   return (
     <div className="space-y-4">
-      <a
-        href="https://nationalresearchplatform.org"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block"
-      >
-        <img
-          src="/images/NRP_LOGO-cropped.png"
-          alt="National Research Platform"
-          className="block h-12 object-scale-down dark:hidden"
-        />
-        <img
-          src="/images/NRP_LOGO-cropped-dark.png"
-          alt="National Research Platform"
-          className="hidden h-12 object-scale-down dark:block"
-        />
-      </a>
-
-      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-        A partnership of more than 50 institutions, led by researchers at UC San Diego,
-        University of Nebraska&ndash;Lincoln, and Massachusetts Green High Performance
-        Computing Center.
-      </p>
+      <NrpPanelIntro />
 
       <div>
         <label htmlFor="siteSelect" className={LABEL_CLASS}>

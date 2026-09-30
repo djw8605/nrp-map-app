@@ -46,6 +46,41 @@ sites, a per-zoom pin-count breakdown, the panel and hover card rendered outside
 the map (so they can be judged without a Mapbox token), and the assertions from
 `lib/siteClusters.checks.js` running in the page.
 
+### Usage map
+
+The map on `/` and `/map` has a **Contributors | Usage** switch. Contributors is
+the site map. Usage shades every US state, and every other country, home to
+an institution with any NRP usage (CPU, GPU or LLM) in the last three years, in
+five steps of institution count (1, 2–3, 4–6, 7–11, 12+); US states with none
+get a dashed outline. The panel ranks the regions, searches regions and
+institutions, and is linked both ways to the map: a row lights its region, and
+picking one flies the map there. Clicking a region lists its institutions.
+
+- Data: `/api/usageByRegion` proxies `usage-by-region.json` from R2
+  (`USAGE_PUBLIC_URL`), published every 6 hours by
+  `generate-nodes/generate-usage.js`. The file also carries per-institution and
+  per-region CPU, GPU and LLM totals; the panel shows a selected region's totals,
+  and the map shading uses institution counts only.
+- Outlines: `public/geo/usage-regions.json`, built by
+  `node scripts/build-usage-regions.mjs` (committed; rebuild only if the sources
+  change). Countries too small for the outline file are drawn as dots.
+- Checks: `node scripts/run-usage-region-checks.mjs`.
+- Rollout: the file exists only after the re-applied CronJob has run once; see
+  "Rollout" in `generate-nodes/README.md`. Until then the Usage view shows "Usage
+  data unavailable".
+- Local development: put a `generate-usage.js --dry-run` output in
+  `public/dev/usage-by-region.json` and set `USAGE_PUBLIC_URL` to a URL that
+  serves that file, such as `http://localhost:3000/dev/usage-by-region.json`
+  when the dev server runs on port 3000, in `.env.development.local`.
+
+URL parameters for `/map` (and so for iframe embeds):
+
+| Parameter | Effect |
+|---|---|
+| `view=usage` | Open on the usage map (default is contributors). |
+| `toggle=0` | Hide the Contributors / Usage switch. |
+| `panel=0` | Hide the side panel (existing). |
+
 ### CORS
 
 The API route `/api/nodes` enables permissive CORS to allow access from any origin. This supports external sites embedding or fetching node data directly. Preflight `OPTIONS` requests are handled and the following headers are returned on requests to this route:
@@ -115,10 +150,13 @@ The deployment includes RBAC configuration:
 
 ### Website (Next.js)
 - `R2_PUBLIC_URL` - Public URL for the Cloudflare R2 bucket (optional, defaults to `https://nrp-dashboard.r2.dev/nodes.json`)
+- `USAGE_PUBLIC_URL` - Public URL of `usage-by-region.json`, read by `/api/usageByRegion` (optional, defaults to `https://dash-api.nrp.ai/usage-by-region.json`)
 
 ### Node Generator (Kubernetes)
 - `NETBOX_TOKEN` - Netbox API token
 - `CLOUDFLARE_ID` - Cloudflare account ID
 - `CLOUDFLARE_ACCESS_KEY` - Cloudflare R2 access key ID
 - `CLOUDFLARE_SECRET_ACCESS_KEY` - Cloudflare R2 secret access key
+- `USAGE_PUBLIC_URL` - Public URL of the previously published `usage-by-region.json`, used by `generate-usage.js` as its ROR cache and for the publish guard (optional, defaults to `https://dash-api.nrp.ai/usage-by-region.json`)
+- `ACCOUNTING_API_URL` - Base URL of the accounting OpenAPI bridge read by `generate-usage.js` (optional, defaults to `https://nrp-accounting-mcp.nrp-nautilus.io/openapi`)
 

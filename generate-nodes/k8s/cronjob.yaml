@@ -36,6 +36,8 @@ spec:
                 cd /tmp/repo/generate-nodes && \
                 # install only production deps to save time/storage
                 npm ci --production && \
-                node generate-nodes.js
+                { node generate-nodes.js; nodes=$?; \
+                  node generate-usage.js; usage=$?; \
+                  exit $(( nodes || usage )); }
           nodeSelector:
             kubernetes.io/os: linux
