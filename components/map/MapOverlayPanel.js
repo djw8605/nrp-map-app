@@ -27,6 +27,9 @@ export default function MapOverlayPanel({
   onClose,
   onBack,
   backLabel = 'Back to overview',
+  // When this changes to a non-null value the panel expands, so a collapsed
+  // bottom sheet opens to show what the user just clicked on the map.
+  expandKey,
   children,
 }) {
   const panelRef = useRef(null);
@@ -58,6 +61,10 @@ export default function MapOverlayPanel({
   useEffect(() => {
     setIsExpanded(!isCompact);
   }, [isCompact]);
+
+  useEffect(() => {
+    if (expandKey != null) setIsExpanded(true);
+  }, [expandKey]);
 
   const toggleExpanded = useCallback(() => setIsExpanded((value) => !value), []);
 

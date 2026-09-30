@@ -6,6 +6,8 @@ import MapOverlayPanel from "../components/map/MapOverlayPanel";
 import { MapOverviewContent, MapSiteContent } from "../components/map/MapPanelContent";
 import { SiteSelectBox } from "../components/map/SiteSelect";
 import { useSiteDrillIn } from "../components/map/useSiteDrillIn";
+import MapViewToggle from "../components/map/MapViewToggle";
+import { useMapView } from "../components/map/useMapView";
 import { fetcher } from "../lib/fetcher";
 import { DEFAULT_CLUSTER_RADIUS_KM, clusterSites, findGroupForSite } from "../lib/siteClusters";
 
@@ -45,6 +47,16 @@ export default function MapPage() {
   });
 
   const showPanel = router.query.panel !== '0';
+  const { view, setView, showToggle } = useMapView();
+
+  // The usage map is a zoomed-out view, so leave a drilled-in site first, and
+  // drop the selection that belongs to the view being left.
+  const handleViewChange = useCallback((nextView) => {
+    if (isSiteMode) exitToOverview();
+    setSelectedSite(null);
+    setFocusedSiteId(null);
+    setView(nextView);
+  }, [isSiteMode, exitToOverview, setView]);
 
   const handleRegexChange = useCallback((pattern) => {
     setRegexPattern(pattern);
@@ -104,8 +116,10 @@ export default function MapPage() {
         showExpandLink={false}
         reservePanelSpace={showPanel}
         clusterRadiusKm={DEFAULT_CLUSTER_RADIUS_KM}
+        view={view}
       >
-        {showPanel ? (
+        {showToggle ? <MapViewToggle view={view} onChange={handleViewChange} /> : null}
+        {view === 'contributors' && showPanel ? (
           selectedSite ? (
             /* One picker in the header serves as the title and the switcher; see
                pages/index.js, including why a merged pin passes its primary. */

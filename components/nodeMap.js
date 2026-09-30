@@ -119,6 +119,14 @@ export default function NodeMap({
   // Render these sites instead of fetching /api/nodes. For the preview harness,
   // which needs to show fixture geometry the live payload does not contain.
   sites: sitesOverride,
+  /*
+   * 'contributors' (the site pins) or 'usage'. In usage view the pins, their hover
+   * card and the legend are hidden and `mapChildren` supplies the layers instead;
+   * the map instance, camera and controls are shared, so switching is instant.
+   */
+  view = 'contributors',
+  // Rendered inside <Map>, so it can hold Sources, Layers and Popups.
+  mapChildren,
   children,
 }) {
   // Fetch nodes data from API. Skipped entirely when the caller supplies sites.
@@ -150,6 +158,11 @@ export default function NodeMap({
   useEffect(() => {
     setHoveredSite(null);
   }, [isSiteMode]);
+
+  // A pin hovered at the moment of switching views never gets its mouseleave.
+  useEffect(() => {
+    setHoveredSite(null);
+  }, [view]);
 
   /*
    * Selection state is tracked in terms of *sites*, while the map draws *groups*
@@ -450,6 +463,8 @@ export default function NodeMap({
       ? highlightedPinSizeForZoom(zoom)
       : pinSizeForZoom(zoom)) * PIN_ASPECT;
 
+  const showPins = view === 'contributors';
+
   return (
     <>
       {/* `nrp-map` scopes the themed Mapbox control chrome in globals.css. */}
@@ -470,7 +485,7 @@ export default function NodeMap({
           <FullscreenControl position="top-left" />
           <NavigationControl position="top-left" visualizePitch={true} />
 
-          {pins}
+          {showPins && pins}
 
           {/*
             * One Popup for whichever pin is hovered, rather than a tooltip nested
@@ -479,7 +494,7 @@ export default function NodeMap({
             * neighbouring pins. Mapbox's popup container sits above them all.
             * Keyed by site so the entrance animation replays pin to pin.
             */}
-          {hoverCardSite && (
+          {showPins && hoverCardSite && (
             <Popup
               key={hoverCardSite.id}
               longitude={hoverCardSite.longitude}
@@ -497,10 +512,11 @@ export default function NodeMap({
             </Popup>
           )}
 
+          {mapChildren}
         </Map>
 
         {/* Overlay stack. The legend is noise once zoomed into a single site. */}
-        {!isSiteMode && (
+        {showPins && !isSiteMode && (
           <Legend
             selectedSites={selectedSites}
             selectionLegendName={selectionLegendName}
@@ -510,7 +526,7 @@ export default function NodeMap({
 
         {showExpandLink && !isSiteMode && (
           <Link
-            href="/map"
+            href={view === 'usage' ? '/map?view=usage' : '/map'}
             title="Open full-screen map"
             aria-label="Open full-screen map"
             className="map-glass-panel absolute top-3 right-3 z-10 flex items-center justify-center p-2 transition-colors"
