@@ -12,6 +12,7 @@ import UsageMapLayer from "../components/usage/UsageMapLayer";
 import UsageLegend from "../components/usage/UsageLegend";
 import UsagePanel from "../components/usage/UsagePanel";
 import { useUsageData } from "../components/usage/useUsageData";
+import { useUsageSelection } from "../components/usage/useUsageSelection";
 import { fetcher } from "../lib/fetcher";
 import { DEFAULT_CLUSTER_RADIUS_KM, clusterSites, findGroupForSite } from "../lib/siteClusters";
 
@@ -53,7 +54,8 @@ export default function MapPage() {
   const showPanel = router.query.panel !== '0';
   const { view, setView, showToggle } = useMapView();
   const isUsageView = view === 'usage';
-  const [selectedRegionCode, setSelectedRegionCode] = useState(null);
+  const usageSelection = useUsageSelection();
+  const clearUsageSelection = usageSelection.clear;
   const usageData = useUsageData(isUsageView);
 
   // The usage map is a zoomed-out view, so leave a drilled-in site first, and
@@ -62,9 +64,9 @@ export default function MapPage() {
     if (isSiteMode) exitToOverview();
     setSelectedSite(null);
     setFocusedSiteId(null);
-    setSelectedRegionCode(null);
+    clearUsageSelection();
     setView(nextView);
-  }, [isSiteMode, exitToOverview, setView]);
+  }, [isSiteMode, exitToOverview, setView, clearUsageSelection]);
 
   const handleRegexChange = useCallback((pattern) => {
     setRegexPattern(pattern);
@@ -129,8 +131,8 @@ export default function MapPage() {
           <UsageMapLayer
             usage={usageData.usage}
             shapes={usageData.shapes}
-            selectedCode={selectedRegionCode}
-            onSelectCode={setSelectedRegionCode}
+            usageSelection={usageSelection}
+            panelShown={showPanel}
           />
         ) : null}
       >
@@ -143,8 +145,8 @@ export default function MapPage() {
                 usage={usageData.usage}
                 error={usageData.error}
                 isLoading={usageData.isLoading}
-                selectedCode={selectedRegionCode}
-                onSelectCode={setSelectedRegionCode}
+                onRetry={usageData.retry}
+                usageSelection={usageSelection}
               />
             ) : null}
           </>

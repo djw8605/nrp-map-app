@@ -17,6 +17,7 @@ import UsageMapLayer from '../components/usage/UsageMapLayer'
 import UsageLegend from '../components/usage/UsageLegend'
 import UsagePanel from '../components/usage/UsagePanel'
 import { useUsageData } from '../components/usage/useUsageData'
+import { useUsageSelection } from '../components/usage/useUsageSelection'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { Card } from '@tremor/react'
 import useSWR from 'swr'
@@ -88,7 +89,8 @@ export default function Home() {
 
   const { view, setView, showToggle } = useMapView();
   const isUsageView = view === 'usage';
-  const [selectedRegionCode, setSelectedRegionCode] = useState(null);
+  const usageSelection = useUsageSelection();
+  const clearUsageSelection = usageSelection.clear;
   const usageData = useUsageData(isUsageView);
 
   // The usage map is a zoomed-out view, so leave a drilled-in site first, and
@@ -97,9 +99,9 @@ export default function Home() {
     if (isSiteMode) exitToOverview();
     setSelectedSite(null);
     setFocusedSiteId(null);
-    setSelectedRegionCode(null);
+    clearUsageSelection();
     setView(nextView);
-  }, [isSiteMode, exitToOverview, setView]);
+  }, [isSiteMode, exitToOverview, setView, clearUsageSelection]);
 
   // Handle regex pattern change for selection
   const handleRegexChange = (pattern) => {
@@ -168,8 +170,7 @@ export default function Home() {
                 <UsageMapLayer
                   usage={usageData.usage}
                   shapes={usageData.shapes}
-                  selectedCode={selectedRegionCode}
-                  onSelectCode={setSelectedRegionCode}
+                  usageSelection={usageSelection}
                 />
               ) : null}
             >
@@ -181,8 +182,8 @@ export default function Home() {
                     usage={usageData.usage}
                     error={usageData.error}
                     isLoading={usageData.isLoading}
-                    selectedCode={selectedRegionCode}
-                    onSelectCode={setSelectedRegionCode}
+                    onRetry={usageData.retry}
+                    usageSelection={usageSelection}
                   />
                 </>
               ) : null}

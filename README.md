@@ -49,14 +49,18 @@ the map (so they can be judged without a Mapbox token), and the assertions from
 ### Usage map
 
 The map on `/` and `/map` has a **Contributors | Usage** switch. Contributors is
-the site map. Usage highlights every US state, and every other country, home to
-an institution with any NRP usage (CPU, GPU or LLM) in the last three years;
-clicking a region lists its institutions.
+the site map. Usage shades every US state, and every other country, home to
+an institution with any NRP usage (CPU, GPU or LLM) in the last three years, in
+five steps of institution count (1, 2–3, 4–6, 7–11, 12+); US states with none
+get a dashed outline. The panel ranks the regions, searches regions and
+institutions, and is linked both ways to the map: a row lights its region, and
+picking one flies the map there. Clicking a region lists its institutions.
 
 - Data: `/api/usageByRegion` proxies `usage-by-region.json` from R2
   (`USAGE_PUBLIC_URL`), published every 6 hours by
   `generate-nodes/generate-usage.js`. The file also carries per-institution and
-  per-region CPU, GPU and LLM totals, which the UI does not show yet.
+  per-region CPU, GPU and LLM totals; the panel shows a selected region's totals,
+  and the map shading uses institution counts only.
 - Outlines: `public/geo/usage-regions.json`, built by
   `node scripts/build-usage-regions.mjs` (committed; rebuild only if the sources
   change). Countries too small for the outline file are drawn as dots.

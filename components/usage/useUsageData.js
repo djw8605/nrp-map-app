@@ -19,5 +19,10 @@ export function useUsageData(enabled) {
     shapes: shapes.data,
     error,
     isLoading: Boolean(enabled && !error && (!usage.data || !shapes.data)),
+    // Past errorRetryCount SWR stops trying, so the panel offers this instead.
+    retry: () => {
+      usage.mutate();
+      shapes.mutate();
+    },
   };
 }
