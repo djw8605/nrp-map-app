@@ -8,6 +8,10 @@ import { SiteSelectBox } from "../components/map/SiteSelect";
 import { useSiteDrillIn } from "../components/map/useSiteDrillIn";
 import MapViewToggle from "../components/map/MapViewToggle";
 import { useMapView } from "../components/map/useMapView";
+import UsageMapLayer from "../components/usage/UsageMapLayer";
+import UsageLegend from "../components/usage/UsageLegend";
+import UsagePanel from "../components/usage/UsagePanel";
+import { useUsageData } from "../components/usage/useUsageData";
 import { fetcher } from "../lib/fetcher";
 import { DEFAULT_CLUSTER_RADIUS_KM, clusterSites, findGroupForSite } from "../lib/siteClusters";
 
@@ -48,6 +52,9 @@ export default function MapPage() {
 
   const showPanel = router.query.panel !== '0';
   const { view, setView, showToggle } = useMapView();
+  const isUsageView = view === 'usage';
+  const [selectedRegionCode, setSelectedRegionCode] = useState(null);
+  const usageData = useUsageData(isUsageView);
 
   // The usage map is a zoomed-out view, so leave a drilled-in site first, and
   // drop the selection that belongs to the view being left.
@@ -55,6 +62,7 @@ export default function MapPage() {
     if (isSiteMode) exitToOverview();
     setSelectedSite(null);
     setFocusedSiteId(null);
+    setSelectedRegionCode(null);
     setView(nextView);
   }, [isSiteMode, exitToOverview, setView]);
 
@@ -117,8 +125,30 @@ export default function MapPage() {
         reservePanelSpace={showPanel}
         clusterRadiusKm={DEFAULT_CLUSTER_RADIUS_KM}
         view={view}
+        mapChildren={isUsageView ? (
+          <UsageMapLayer
+            usage={usageData.usage}
+            shapes={usageData.shapes}
+            selectedCode={selectedRegionCode}
+            onSelectCode={setSelectedRegionCode}
+          />
+        ) : null}
       >
         {showToggle ? <MapViewToggle view={view} onChange={handleViewChange} /> : null}
+        {isUsageView ? (
+          <>
+            <UsageLegend usage={usageData.usage} error={usageData.error} isLoading={usageData.isLoading} />
+            {showPanel ? (
+              <UsagePanel
+                usage={usageData.usage}
+                error={usageData.error}
+                isLoading={usageData.isLoading}
+                selectedCode={selectedRegionCode}
+                onSelectCode={setSelectedRegionCode}
+              />
+            ) : null}
+          </>
+        ) : null}
         {view === 'contributors' && showPanel ? (
           selectedSite ? (
             /* One picker in the header serves as the title and the switcher; see

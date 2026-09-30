@@ -33,3 +33,6 @@ yarn-error.log*
 
 # generate-usage.js --dry-run output
 /generate-nodes/usage-by-region.json
+
+# local fixture for /api/usageByRegion (see .env.development.local)
+/public/dev/

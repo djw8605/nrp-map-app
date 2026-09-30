@@ -13,6 +13,10 @@ import { SiteSelectBox } from '../components/map/SiteSelect'
 import { useSiteDrillIn } from '../components/map/useSiteDrillIn'
 import MapViewToggle from '../components/map/MapViewToggle'
 import { useMapView } from '../components/map/useMapView'
+import UsageMapLayer from '../components/usage/UsageMapLayer'
+import UsageLegend from '../components/usage/UsageLegend'
+import UsagePanel from '../components/usage/UsagePanel'
+import { useUsageData } from '../components/usage/useUsageData'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { Card } from '@tremor/react'
 import useSWR from 'swr'
@@ -82,7 +86,10 @@ export default function Home() {
     enterSite(site);
   }, [siteGroups, enterSite, exitToOverview]);
 
-  const { view, setView } = useMapView();
+  const { view, setView, showToggle } = useMapView();
+  const isUsageView = view === 'usage';
+  const [selectedRegionCode, setSelectedRegionCode] = useState(null);
+  const usageData = useUsageData(isUsageView);
 
   // The usage map is a zoomed-out view, so leave a drilled-in site first, and
   // drop the selection that belongs to the view being left.
@@ -90,6 +97,7 @@ export default function Home() {
     if (isSiteMode) exitToOverview();
     setSelectedSite(null);
     setFocusedSiteId(null);
+    setSelectedRegionCode(null);
     setView(nextView);
   }, [isSiteMode, exitToOverview, setView]);
 
@@ -156,8 +164,28 @@ export default function Home() {
               onExitOverview={exitToOverview}
               clusterRadiusKm={DEFAULT_CLUSTER_RADIUS_KM}
               view={view}
+              mapChildren={isUsageView ? (
+                <UsageMapLayer
+                  usage={usageData.usage}
+                  shapes={usageData.shapes}
+                  selectedCode={selectedRegionCode}
+                  onSelectCode={setSelectedRegionCode}
+                />
+              ) : null}
             >
-              <MapViewToggle view={view} onChange={handleViewChange} />
+              {showToggle ? <MapViewToggle view={view} onChange={handleViewChange} /> : null}
+              {isUsageView ? (
+                <>
+                  <UsageLegend usage={usageData.usage} error={usageData.error} isLoading={usageData.isLoading} />
+                  <UsagePanel
+                    usage={usageData.usage}
+                    error={usageData.error}
+                    isLoading={usageData.isLoading}
+                    selectedCode={selectedRegionCode}
+                    onSelectCode={setSelectedRegionCode}
+                  />
+                </>
+              ) : null}
               {view === 'contributors' ? (selectedSite ? (
                 /* The picker in the header is the site's title: it names the open
                    site and switches to another. onClose is omitted deliberately —
