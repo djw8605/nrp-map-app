@@ -46,6 +46,34 @@ sites, a per-zoom pin-count breakdown, the panel and hover card rendered outside
 the map (so they can be judged without a Mapbox token), and the assertions from
 `lib/siteClusters.checks.js` running in the page.
 
+### Usage map
+
+The map on `/` and `/map` has a **Contributors | Usage** switch. Contributors is
+the site map. Usage highlights every US state, and every other country, home to
+an institution with any NRP usage (CPU, GPU or LLM) in the last three years;
+clicking a region lists its institutions.
+
+- Data: `/api/usageByRegion` proxies `usage-by-region.json` from R2
+  (`USAGE_PUBLIC_URL`), published every 6 hours by
+  `generate-nodes/generate-usage.js`. The file also carries per-institution and
+  per-region CPU, GPU and LLM totals, which the UI does not show yet.
+- Outlines: `public/geo/usage-regions.json`, built by
+  `node scripts/build-usage-regions.mjs` (committed; rebuild only if the sources
+  change). Countries too small for the outline file are drawn as dots.
+- Checks: `node scripts/run-usage-region-checks.mjs`.
+- Local development: put a `generate-usage.js --dry-run` output in
+  `public/dev/usage-by-region.json` and set `USAGE_PUBLIC_URL` to a URL that
+  serves that file, such as `http://localhost:3000/dev/usage-by-region.json`
+  when the dev server runs on port 3000, in `.env.development.local`.
+
+URL parameters for `/map` (and so for iframe embeds):
+
+| Parameter | Effect |
+|---|---|
+| `view=usage` | Open on the usage map (default is contributors). |
+| `toggle=0` | Hide the Contributors / Usage switch. |
+| `panel=0` | Hide the side panel (existing). |
+
 ### CORS
 
 The API route `/api/nodes` enables permissive CORS to allow access from any origin. This supports external sites embedding or fetching node data directly. Preflight `OPTIONS` requests are handled and the following headers are returned on requests to this route:
