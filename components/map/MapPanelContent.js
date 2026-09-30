@@ -9,6 +9,7 @@ import {
 } from '../mapInfoPanel';
 import { SiteMultiSelectBox, SiteSelectBox } from './SiteSelect';
 import ClusterMemberList from './ClusterMemberList';
+import NrpPanelIntro from './NrpPanelIntro';
 import { summarizeSites } from '../../lib/siteClusters';
 
 // border-[1px] rather than border: see the note in ./SiteSelect.js — the global
@@ -40,29 +41,7 @@ export function MapOverviewContent({
 }) {
   return (
     <div className="space-y-4">
-      <a
-        href="https://nationalresearchplatform.org"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block"
-      >
-        <img
-          src="/images/NRP_LOGO-cropped.png"
-          alt="National Research Platform"
-          className="block h-12 object-scale-down dark:hidden"
-        />
-        <img
-          src="/images/NRP_LOGO-cropped-dark.png"
-          alt="National Research Platform"
-          className="hidden h-12 object-scale-down dark:block"
-        />
-      </a>
-
-      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-        A partnership of more than 50 institutions, led by researchers at UC San Diego,
-        University of Nebraska&ndash;Lincoln, and Massachusetts Green High Performance
-        Computing Center.
-      </p>
+      <NrpPanelIntro />
 
       <div>
         <label htmlFor="siteSelect" className={LABEL_CLASS}>

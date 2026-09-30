@@ -28,11 +28,14 @@ export default function MapOverlayPanel({
   onBack,
   backLabel = 'Back to overview',
   // When this changes to a non-null value the panel expands, so a collapsed
-  // bottom sheet opens to show what the user just clicked on the map.
+  // bottom sheet opens to show what the user just clicked on the map. Any change
+  // also scrolls the content back to the top: the new content is a different
+  // page, not a continuation of the one that was scrolled.
   expandKey,
   children,
 }) {
   const panelRef = useRef(null);
+  const contentRef = useRef(null);
   const [isCompact, setIsCompact] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -64,6 +67,7 @@ export default function MapOverlayPanel({
 
   useEffect(() => {
     if (expandKey != null) setIsExpanded(true);
+    contentRef.current?.scrollTo?.({ top: 0 });
   }, [expandKey]);
 
   const toggleExpanded = useCallback(() => setIsExpanded((value) => !value), []);
@@ -151,6 +155,7 @@ export default function MapOverlayPanel({
 
         {isExpanded ? (
           <div
+            ref={contentRef}
             className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 ${hasHeader ? '' : 'pt-4'}`}
           >
             {children}
