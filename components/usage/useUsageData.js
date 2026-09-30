@@ -1,7 +1,8 @@
 import useSWR from 'swr';
 import { fetcher } from '../../lib/fetcher';
 
-const SWR_OPTIONS = { revalidateOnFocus: false };
+// Few retries: before the first publish the route answers 500 on every try.
+const SWR_OPTIONS = { revalidateOnFocus: false, errorRetryCount: 2 };
 
 /*
  * The usage payload and the region outlines, fetched only once the usage view
