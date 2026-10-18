@@ -38,6 +38,7 @@ spec:
                 npm ci --production && \
                 { node generate-nodes.js; nodes=$?; \
                   node generate-usage.js; usage=$?; \
-                  exit $(( nodes || usage )); }
+                  node generate-wall.js; wall=$?; \
+                  exit $(( nodes || usage || wall )); }
           nodeSelector:
             kubernetes.io/os: linux
