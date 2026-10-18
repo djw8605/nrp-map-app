@@ -73,6 +73,30 @@ picking one flies the map there. Clicking a region lists its institutions.
   serves that file, such as `http://localhost:3000/dev/usage-by-region.json`
   when the dev server runs on port 3000, in `.env.development.local`.
 
+### Live wall (`/wall`)
+
+A full-screen page for the big screen in the UNL Holland Computing Center
+offices, for people who have never heard of the NRP. It explains GPUs and the NRP
+in one plain sentence, then shows one day of real GPU work: host campuses as
+glowing dots sized by the GPU hours they ran, and light moving along arcs from
+each researcher's campus to the campus whose GPUs ran the work. Five tiles give
+the day's totals, and a line under the map rotates through the longest-distance
+partnerships. The home institution is amber, with a "You are here" label.
+
+- Data: `/api/wall` proxies `wall.json` from R2 (`WALL_PUBLIC_URL`), published
+  every 6 hours by `generate-nodes/generate-wall.js` (contract in
+  `generate-nodes/README.md`). The page refetches every 15 minutes and keeps the
+  last good data through errors.
+- Outline: `public/geo/us-outline.json`, built by
+  `node scripts/build-wall-outline.mjs` (committed; rebuild only if the source
+  changes). The map uses no Mapbox and needs no token.
+- Checks: `node scripts/run-wall-checks.mjs`.
+- No navbar or footer; sized in viewport units for a 16:9 screen. Motion stops
+  under `prefers-reduced-motion`.
+- Local development: put a `generate-wall.js --dry-run` output in
+  `public/dev/wall.json` and set `WALL_PUBLIC_URL` to a URL that serves it, such
+  as `http://localhost:3000/dev/wall.json`, in `.env.development.local`.
+
 URL parameters for `/map` (and so for iframe embeds):
 
 | Parameter | Effect |
@@ -151,12 +175,15 @@ The deployment includes RBAC configuration:
 ### Website (Next.js)
 - `R2_PUBLIC_URL` - Public URL for the Cloudflare R2 bucket (optional, defaults to `https://nrp-dashboard.r2.dev/nodes.json`)
 - `USAGE_PUBLIC_URL` - Public URL of `usage-by-region.json`, read by `/api/usageByRegion` (optional, defaults to `https://dash-api.nrp.ai/usage-by-region.json`)
+- `WALL_PUBLIC_URL` - Public URL of `wall.json`, read by `/api/wall` (optional, defaults to `https://dash-api.nrp.ai/wall.json`)
 
 ### Node Generator (Kubernetes)
 - `NETBOX_TOKEN` - Netbox API token
 - `CLOUDFLARE_ID` - Cloudflare account ID
 - `CLOUDFLARE_ACCESS_KEY` - Cloudflare R2 access key ID
 - `CLOUDFLARE_SECRET_ACCESS_KEY` - Cloudflare R2 secret access key
-- `USAGE_PUBLIC_URL` - Public URL of the previously published `usage-by-region.json`, used by `generate-usage.js` as its ROR cache and for the publish guard (optional, defaults to `https://dash-api.nrp.ai/usage-by-region.json`)
-- `ACCOUNTING_API_URL` - Base URL of the accounting OpenAPI bridge read by `generate-usage.js` (optional, defaults to `https://nrp-accounting-mcp.nrp-nautilus.io/openapi`)
+- `USAGE_PUBLIC_URL` - Public URL of the previously published `usage-by-region.json`, used by `generate-usage.js` as its ROR cache and for the publish guard, and by `generate-wall.js` as its ROR cache (optional, defaults to `https://dash-api.nrp.ai/usage-by-region.json`)
+- `ACCOUNTING_API_URL` - Base URL of the accounting OpenAPI bridge read by `generate-usage.js` and `generate-wall.js` (optional, defaults to `https://nrp-accounting-mcp.nrp-nautilus.io/openapi`)
+- `NODES_PUBLIC_URL` - Public URL of the published `nodes.json`, read by `generate-wall.js` for Netbox coordinates of host campuses ROR cannot place (optional, defaults to `https://dash-api.nrp.ai/nodes.json`)
+- `WALL_HOME_INSTITUTION` - The institution `generate-wall.js` marks "You are here" on `/wall` (optional, defaults to `University of Nebraska–Lincoln`)
 

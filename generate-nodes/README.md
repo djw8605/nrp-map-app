@@ -34,6 +34,92 @@ after this change lands:
 Until the file is published, the dashboard's Usage view shows "Usage data
 unavailable"; the Contributors view is unaffected.
 
+### Live wall (`generate-wall.js`)
+
+`generate-wall.js` publishes `wall.json` for the `/wall` kiosk page: one day of GPU
+work, by the researcher's institution and by the campus whose GPUs ran it, with
+both sides placed on the map.
+
+- Data: the same accounting API, for its `latest_data_date`.
+  `query_resource_usage` with `resource: "gpu"` grouped by `institution` (the
+  researcher's home) and `node_institution` (the campus hosting the hardware),
+  and `query_llm_token_usage` grouped by `model`, summed. A result that reaches
+  the 5000-row limit fails the run.
+- Both sides of every pair are placed the way `generate-usage.js` places
+  institutions: `institution-overrides.json`, then the published
+  `usage-by-region.json`, then ROR. A host still unplaced takes its Netbox
+  coordinates from the published `nodes.json` (`NODES_PUBLIC_URL`) when every
+  site matching its name is within 50 miles of the others. Anything left is
+  listed under `unmapped` and in the job log; add an override for it.
+- Pairs under 10 miles apart are local work: in the totals, never a flow. That
+  covers one campus under two names ("University of California San Diego" as the
+  user, "University of California, San Diego" as the host), which ROR places on
+  the same city point.
+- `WALL_HOME_INSTITUTION` names the "you are here" institution (default
+  `University of Nebraska–Lincoln`).
+- `node generate-wall.js --dry-run` writes `./wall.json` instead of uploading.
+  `npm test` also runs the unit tests for `wall-lib.js`.
+- A run whose total GPU hours is 0, or that places no flow, exits non-zero
+  without publishing.
+
+#### `wall.json`
+
+```json
+{
+  "generated_at": "2026-10-18T06:00:00.000Z",
+  "day": "2026-10-17",
+  "totals": {
+    "gpu_hours": 22507.58, "gpu_years": 2.569, "away_share": 0.7123,
+    "host_sites": 41, "user_institutions": 33,
+    "llm_tokens": 4637722063, "llm_novels": 38647.7
+  },
+  "home": { "institution": "University of Nebraska–Lincoln", "served_hours": 3263.92, "partner_count": 19 },
+  "sites": [
+    { "name": "University of California, San Diego", "place": "San Diego, CA", "lat": 32.71571, "lng": -117.16472, "hosted_hours": 9494.1 }
+  ],
+  "flows": [
+    {
+      "from": "University of California San Diego", "to": "Massachusetts Green High Performance Computing Center",
+      "gpu_hours": 1612.92, "miles": 2549,
+      "from_lat": 32.71571, "from_lng": -117.16472, "to_lat": 42.20426, "to_lng": -72.61620
+    }
+  ],
+  "unmapped": [{ "name": "Example Network", "side": "host", "gpu_hours": 12.5 }]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `day` | The accounting API's `latest_data_date`; every number is for that one day. |
+| `totals.gpu_hours` | All GPU hours that day, including local work and pairs that could not be placed. |
+| `totals.gpu_years` | `gpu_hours / 8760`: one GPU running nonstop for this many years. |
+| `totals.away_share` | Of the hours whose two sides are both placed, the share run 10 or more miles from the researcher's institution. |
+| `totals.host_sites`, `totals.user_institutions` | Distinct hosting campuses and researcher institutions, placed or not. |
+| `totals.llm_tokens`, `totals.llm_novels` | LLM tokens that day, and `llm_tokens / 120000` (about one novel each). |
+| `home.served_hours`, `home.partner_count` | GPU hours the home campus hosted for other institutions, and how many there were. A user counts as home if its name matches or it is placed within 10 miles of home. |
+| `sites[]` | Placed host campuses, by `hosted_hours` (all work run there). `place` is "City, ST" or "City, Country" from ROR, a region name for an override, or null for a Netbox match. |
+| `flows[]` | Placed pairs 10 or more miles apart, by `gpu_hours`. `miles` is great-circle. `from_*`/`to_*` are the two ends' coordinates, so a user campus that hosts nothing can still be drawn. |
+| `unmapped[]` | Each name and side that could not be placed, by GPU hours. |
+
+Hours are rounded to two decimals; `lat`/`lng` are as resolved.
+
+#### Rollout
+
+The CronJob runs `generate-wall.js` only once its manifest is re-applied, so
+after this change lands:
+
+1. Merge to `main` (the job clones the repository on every run).
+2. Re-apply the manifests: `kubectl apply -k generate-nodes/k8s/` (needs
+   `k8s/secrets.env`), or just `kubectl apply -f generate-nodes/k8s/cronjob.yaml`.
+3. Publish once without waiting for the schedule:
+   `kubectl create job --from=cronjob/generate-nodes wall-first-run`, and read
+   its log for the `unmapped` list.
+4. Confirm `https://dash-api.nrp.ai/wall.json` is served.
+5. Open `/wall` on the office screen in a full-screen (kiosk) browser.
+
+Until the file is published, `/wall` shows "Live data is unavailable right now.";
+nothing else on the dashboard depends on it.
+
 ## Requirements
 
 1. Netbox API token (read-only)

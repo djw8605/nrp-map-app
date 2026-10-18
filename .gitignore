@@ -31,8 +31,9 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# generate-usage.js --dry-run output
+# generate-usage.js and generate-wall.js --dry-run output
 /generate-nodes/usage-by-region.json
+/generate-nodes/wall.json
 
-# local fixture for /api/usageByRegion (see .env.development.local)
+# local fixtures for /api/usageByRegion and /api/wall (see .env.development.local)
 /public/dev/
