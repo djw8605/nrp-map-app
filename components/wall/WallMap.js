@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   buildScene,
   fitBox,
+  hitTest,
   placeLabels,
   pointOnArc,
+  scenePoints,
   shortName,
   toScreen,
   worldBox,
@@ -17,6 +19,10 @@ import {
  * text. The first and last are drawn offscreen, only when the data, the size or
  * the spotlight changes. The SVG (through its viewBox) and the canvas (through
  * fitBox(), the same "xMidYMid meet" transform) share the scene's world box.
+ *
+ * Pointing at a dot with a mouse shows the institution's name; clicking or
+ * tapping one picks it (onPick), which moves the amber highlight there. A tap
+ * shows the name too, since a touchscreen has no hover.
  */
 
 const FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -36,6 +42,9 @@ const PULSE_MS = 2600;
 // Hosts in the 50 states that get a label, besides home. Margin places always do.
 const LABELLED_HOSTS = 7;
 const MARGIN_CAPTION = 'Outside the US';
+// How long a tapped dot's name stays up, and how far a press may move and still be a tap.
+const TAP_TIP_MS = 3000;
+const TAP_SLOP = 10;
 // How far above a margin column's first dot its caption sits, in outline pixels.
 const CAPTION_RISE = 30;
 
@@ -123,9 +132,11 @@ function layoutLabels(ctx, scene, fit, size, fontSize, captions) {
     candidates.push({ key, ...onScreen(point, r), lines, ...measure(lines), ...options });
   };
 
+  // "You are here" only at the real home; a picked campus is named alone.
   const { home } = scene;
   if (home) {
-    add('home', home, (home.r || 2) + 6, [{ text: 'You are here', kind: 'kicker' }, ...titleLines(home.name)], {
+    const kicker = scene.here ? [{ text: 'You are here', kind: 'kicker' }] : [];
+    add('home', home, (home.r || 2) + 6, [...kicker, ...titleLines(home.name)], {
       spots: ['above', 'right', 'left', 'below'],
       home: true,
     });
@@ -336,15 +347,85 @@ function drawPulse(ctx, home, fit, now) {
   }
 }
 
-export default function WallMap({ wall, outline, spotlight, reducedMotion }) {
+/*
+ * The name of the dot under the pointer: shown while a mouse hovers, and for a
+ * few seconds after a tap. Picks go to onPick (null: nothing is pickable).
+ */
+function usePointer({ scene, size, onPick }) {
+  const [tip, setTip] = useState(null);
+  const press = useRef(null);
+  const tapTimer = useRef(0);
+  const fit = useMemo(
+    () => (scene && size?.width && size?.height ? fitBox(scene.box, size.width, size.height) : null),
+    [scene, size],
+  );
+  const points = useMemo(() => (scene ? scenePoints(scene) : []), [scene]);
+  useEffect(() => () => clearTimeout(tapTimer.current), []);
+  // A resize moves every dot, so a tip left up would point at nothing.
+  useEffect(() => setTip(null), [size]);
+
+  const dotAt = (event) => {
+    if (!fit) return null;
+    const rect = event.currentTarget.getBoundingClientRect();
+    return hitTest(points, fit, [event.clientX - rect.left, event.clientY - rect.top]);
+  };
+
+  return {
+    tip,
+    handlers: {
+      onPointerMove: (event) => {
+        if (event.pointerType !== 'mouse') return;
+        const dot = dotAt(event);
+        setTip((previous) => (dot ? { ...dot, touch: false } : previous?.touch ? previous : null));
+      },
+      onPointerLeave: (event) => {
+        if (event.pointerType === 'mouse') setTip((previous) => (previous?.touch ? previous : null));
+      },
+      onPointerDown: (event) => {
+        press.current = { x: event.clientX, y: event.clientY };
+      },
+      onPointerUp: (event) => {
+        const start = press.current;
+        press.current = null;
+        if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > TAP_SLOP) return;
+        const dot = dotAt(event);
+        if (dot && onPick) onPick(dot.name);
+        if (event.pointerType === 'mouse') return;
+        clearTimeout(tapTimer.current);
+        setTip(dot ? { ...dot, touch: true } : null);
+        if (dot) tapTimer.current = setTimeout(() => setTip(null), TAP_TIP_MS);
+      },
+    },
+  };
+}
+
+// The tip sits above its dot, and leans inward near the map's sides.
+function Tip({ tip, width }) {
+  const lean = tip.x < width * 0.2 ? 'start' : tip.x > width * 0.8 ? 'end' : 'middle';
+  return (
+    <div
+      className={`wall-tip wall-tip-${lean}`}
+      style={{ left: tip.x, top: tip.y - Math.max(tip.r, 4) - 8 }}
+      role="status"
+    >
+      {tip.name}
+    </div>
+  );
+}
+
+export default function WallMap({ wall, outline, spotlight, reducedMotion, focus, onPick }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const baseRef = useRef(null);
   const topRef = useRef(null);
   const size = useContainerSize(containerRef);
-  const scene = useMemo(() => (wall && outline ? buildScene(wall, outline) : null), [wall, outline]);
+  const scene = useMemo(
+    () => (wall && outline ? buildScene(wall, outline, focus || wall.home.institution) : null),
+    [wall, outline, focus],
+  );
   const box = scene?.box || (outline ? worldBox(outline.bounds) : null);
   const spotlightKey = spotlight ? flowKey(spotlight) : null;
+  const { tip, handlers } = usePointer({ scene, size, onPick });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -395,7 +476,11 @@ export default function WallMap({ wall, outline, spotlight, reducedMotion }) {
     : 'Map of the United States.';
 
   return (
-    <div ref={containerRef} className="wall-map">
+    <div
+      ref={containerRef}
+      className={tip && !tip.touch && onPick ? 'wall-map wall-map-pointing' : 'wall-map'}
+      {...handlers}
+    >
       {box && (
         <svg
           viewBox={`${box.x} ${box.y} ${box.width} ${box.height}`}
@@ -408,6 +493,7 @@ export default function WallMap({ wall, outline, spotlight, reducedMotion }) {
         </svg>
       )}
       <canvas ref={canvasRef} role="img" aria-label={label} />
+      {tip && size && <Tip tip={tip} width={size.width} />}
     </div>
   );
 }

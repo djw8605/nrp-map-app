@@ -1,4 +1,4 @@
-import { formatDay } from '../../lib/wall';
+import { formatDay, nameKey } from '../../lib/wall';
 
 // Swatches are drawn in a 24×12 box and scale with the legend's font size.
 function Swatch({ children }) {
@@ -9,7 +9,8 @@ function Swatch({ children }) {
   );
 }
 
-export default function WallLegend({ wall }) {
+export default function WallLegend({ wall, focus = wall.home.institution }) {
+  const here = nameKey(focus) === nameKey(wall.home.institution);
   return (
     <div className="wall-legend">
       <span className="wall-legend-item">
@@ -31,9 +32,24 @@ export default function WallLegend({ wall }) {
           <circle cx="12" cy="6" r="3" fill="#ffb547" />
           <circle cx="12" cy="6" r="5.3" fill="none" stroke="#ffb547" strokeWidth="1" />
         </Swatch>
-        Amber: {wall.home.institution}, where you are
+        {/*
+          Both wordings share one cell and the hidden one keeps its width, so
+          picking a dot never rewraps the legend and resizes the map. A pick's
+          name is in the amber tile.
+        */}
+        <span className="wall-legend-swap">
+          <span aria-hidden={!here} className={here ? undefined : 'wall-legend-hidden'}>
+            Amber: {wall.home.institution}, where you are
+          </span>
+          <span aria-hidden={here} className={here ? 'wall-legend-hidden' : undefined}>
+            Amber: the campus you picked
+          </span>
+        </span>
       </span>
-      <span className="wall-source">Source: NRP accounting data for {formatDay(wall.day)}</span>
+      <span className="wall-source">
+        Source: NRP accounting data for {formatDay(wall.day)}
+        {wall.month ? ' and the 30 days up to it' : ''}
+      </span>
     </div>
   );
 }

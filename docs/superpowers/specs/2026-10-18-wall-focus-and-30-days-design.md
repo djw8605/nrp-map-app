@@ -32,7 +32,7 @@ did not say the text was chatbot work on NRP GPUs.
 | What can be picked | Every dot on the map: host campuses (`sites`) and campuses that only send work (the small dots at arc starts). |
 | What changes on a pick | The amber dot, its map label and the legend's amber line move to the pick, and the amber tile shows the pick's numbers. Nothing else on the map changes: same arcs, same particles, same spotlight line. |
 | How long a pick lasts | Until someone picks another dot. No idle timer back to the home institution. The 15-minute data refresh keeps the pick (if the picked name is still on the map; otherwise fall back to home). A full page reload starts at home. *(Reload behaviour is Claude's call.)* |
-| Institutions that host no GPUs | The amber tile flips direction: "GPU hours our researchers ran on other campuses' GPUs", and how many campuses. |
+| Institutions that host no GPUs | The amber tile flips direction to the researchers' work elsewhere, and how many campuses. *(Wording shortened while building to "GPU hours our researchers used elsewhere" so it fits on one line; the note names the campuses.)* |
 | 1 day and 30 days | Every one of the five tiles shows both figures, side by side and the same size (option A in the mockups). |
 | Column labels | The day's date ("Oct 17") and "Last 30 days", not "Yesterday": the accounting data can lag more than a day. *(Claude's call.)* |
 | Map and spotlight line | Stay one day. |
@@ -79,13 +79,12 @@ institution the day's `served_*` must equal today's numbers (a test pins this).
 
 A user name and a host name for one campus ("University of California San
 Diego" / "University of California, San Diego") are separate names but one dot.
-The page picks by dot, and the dot carries one name (the site's name when a site
-is there, else the flow's `from`). So for a dot's name, `served_*` must count
-hosting under that name and `away_*` must count work by users local to it
-(same-name-or-within-10-miles, from the dot's point), so the two spellings of one
-campus are not treated as strangers. That is the rule above applied from the
-dot's point; the builder should implement "is the same institution" once and use
-it for both directions.
+`normalizeName` already makes the two spellings equal, so the picked institution
+is matched **by normalised name** on its own side (as host for `served_*`, as user
+for `away_*`), and the same-name-or-within-10-miles rule decides only whether the
+*other* side is "another institution". *(Settled while building: matching the
+picked side by distance too would have counted San Diego State's work as UC San
+Diego's, since ROR places both on San Diego's city point.)*
 
 ### Output: additions to `wall.json`
 
@@ -197,7 +196,7 @@ Amber tile wording:
 
 - `hosts: true`: label "GPU hours our computers ran for others", figures
   `served_hours`, note "For researchers at N other organizations" (30-day N).
-- `hosts: false`: label "GPU hours our researchers ran on other campuses' GPUs",
+- `hosts: false`: label "GPU hours our researchers used elsewhere",
   figures `away_hours`, note "On GPUs at N campuses" (30-day N).
 - Kicker: "Here at the University of Missouri": insert "the" before names that
   start with "University of"; other names as written ("Here at Stanford
@@ -209,10 +208,13 @@ The exact wording of notes, and how the five tiles fit at 1920×1080 and
 ### Legend and source line (`components/wall/WallLegend.js`)
 
 - Amber line: "Amber: University of Nebraska–Lincoln, where you are" for the
-  real home; "Amber: University of Missouri, the campus in the amber box" for any
-  other pick. *(Claude's call on wording.)*
+  real home; "Amber: the campus you picked" for any other pick (its name is in
+  the amber tile). Both wordings occupy one grid cell, the inactive one hidden,
+  so a pick never rewraps the legend and resizes the map. *(Claude's call,
+  changed while building: naming the pick here wrapped long names and squeezed
+  the map.)*
 - Source line names both windows: "Source: NRP accounting data for October 17,
-  2026 and the 30 days before".
+  2026 and the 30 days up to it".
 
 ### Older `wall.json` (deploy order)
 
