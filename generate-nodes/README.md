@@ -69,22 +69,22 @@ both sides placed on the map.
   "generated_at": "2026-10-18T06:00:00.000Z",
   "day": "2026-10-17",
   "totals": {
-    "gpu_hours": 22507.58, "gpu_years": 2.569, "away_share": 0.7123,
-    "host_sites": 41, "user_institutions": 33,
-    "llm_tokens": 4637722063, "llm_novels": 38647.7
+    "gpu_hours": 22507.58, "gpu_years": 2.569, "away_share": 0.7371,
+    "host_sites": 41, "user_institutions": 37,
+    "llm_tokens": 4621581990, "llm_novels": 38513.2
   },
-  "home": { "institution": "University of Nebraska–Lincoln", "served_hours": 3263.92, "partner_count": 19 },
+  "home": { "institution": "University of Nebraska–Lincoln", "served_hours": 3205.17, "partner_count": 19 },
   "sites": [
-    { "name": "University of California, San Diego", "place": "San Diego, CA", "lat": 32.71571, "lng": -117.16472, "hosted_hours": 9494.1 }
+    { "name": "University of California, San Diego", "place": "San Diego, CA", "lat": 32.71571, "lng": -117.16472, "hosted_hours": 7753.17 }
   ],
   "flows": [
     {
       "from": "University of California San Diego", "to": "Massachusetts Green High Performance Computing Center",
-      "gpu_hours": 1612.92, "miles": 2549,
-      "from_lat": 32.71571, "from_lng": -117.16472, "to_lat": 42.20426, "to_lng": -72.61620
+      "gpu_hours": 1612.92, "miles": 2499,
+      "from_lat": 32.71571, "from_lng": -117.16472, "to_lat": 42.20426, "to_lng": -72.6162
     }
   ],
-  "unmapped": [{ "name": "Example Network", "side": "host", "gpu_hours": 12.5 }]
+  "unmapped": [{ "name": "The Open Force Field Consortium", "side": "user", "gpu_hours": 72.25 }]
 }
 ```
 

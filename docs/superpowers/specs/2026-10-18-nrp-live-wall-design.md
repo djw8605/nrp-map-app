@@ -20,7 +20,7 @@ real GPU work moving between campuses across the country.
 | Placing institutions | `usage-lib`'s `resolveInstitutions` unchanged (overrides, then the published `usage-by-region.json`, then ROR). A host it cannot place falls back to Netbox coordinates from the published `nodes.json`, if the name match is unambiguous. |
 | Local work | A pair whose two sides are under 10 miles apart is local: counted in the totals, never drawn as a flow. Same-campus pairs often carry different names ("University of California San Diego" as the user, "University of California, San Diego" as the host) and ROR places both at the same city point. The 10-mile margin also absorbs a city point (ROR) against a campus point (Netbox) for one campus. |
 | Map | SVG outline of the 50 states (Albers USA, Alaska and Hawaii inset) plus a `<canvas>` overlay. No Mapbox, no token. |
-| Off-map places | Anything outside CONUS, Alaska and Hawaii is drawn in a column in the left (Asia, Pacific) or right (everything else) margin. |
+| Off-map places | Anything outside CONUS, Alaska and Hawaii is drawn in a column in the left (Asia, the Pacific, west of 100°W) or right (everything else) margin. |
 | Refresh | SWR every 15 minutes; the last good data stays on screen through errors. |
 | Existing views | The map, the usage view and `generate-nodes.js` are unchanged. `generate-usage.js` only changes to use the shared client module. |
 
@@ -73,18 +73,18 @@ dashboard (Vercel)
   "generated_at": "2026-10-18T06:00:00.000Z",
   "day": "2026-10-17",
   "totals": {
-    "gpu_hours": 22507.6, "gpu_years": 2.57, "away_share": 0.71,
-    "host_sites": 41, "user_institutions": 33,
-    "llm_tokens": 4637722000, "llm_novels": 38648
+    "gpu_hours": 22507.58, "gpu_years": 2.569, "away_share": 0.7371,
+    "host_sites": 41, "user_institutions": 37,
+    "llm_tokens": 4621581990, "llm_novels": 38513.2
   },
-  "home": { "institution": "University of Nebraska–Lincoln", "served_hours": 3260.4, "partner_count": 21 },
-  "sites": [{ "name": "University of California, San Diego", "place": "San Diego, CA", "lat": 32.7, "lng": -117.2, "hosted_hours": 9500.2 }],
+  "home": { "institution": "University of Nebraska–Lincoln", "served_hours": 3205.17, "partner_count": 19 },
+  "sites": [{ "name": "University of California, San Diego", "place": "San Diego, CA", "lat": 32.71571, "lng": -117.16472, "hosted_hours": 7753.17 }],
   "flows": [{
     "from": "University of California San Diego", "to": "Massachusetts Green High Performance Computing Center",
-    "gpu_hours": 1612.9, "miles": 2575,
-    "from_lat": 32.7, "from_lng": -117.2, "to_lat": 42.2, "to_lng": -72.6
+    "gpu_hours": 1612.92, "miles": 2499,
+    "from_lat": 32.71571, "from_lng": -117.16472, "to_lat": 42.20426, "to_lng": -72.6162
   }],
-  "unmapped": [{ "name": "…", "side": "host", "gpu_hours": 12.5 }]
+  "unmapped": [{ "name": "The Open Force Field Consortium", "side": "user", "gpu_hours": 72.25 }]
 }
 ```
 
@@ -147,9 +147,11 @@ dashboard (Vercel)
   width and particle count scaled by `sqrt(gpu_hours)`; particles travel at a
   constant on-screen speed from user to host.
 - Home: amber dot, pulsing ring, "You are here" label.
-- Labels: home first, then the largest hosts and the margin places, each tried
-  right, left, above and below its dot; a label that overlaps an earlier one is
-  dropped.
+- Labels: home first, then the margin places (their place leads: "Daejeon,
+  South Korea"), then the seven largest hosts, each tried right, left, above and
+  below its dot. A label above or below slides sideways to stay on screen; one
+  that still overlaps an earlier label or another dot is dropped. Labels are
+  drawn above the particles, and each margin column is captioned "Outside the US".
 - The spotlighted flow's arc and particles are drawn brighter; the rest dim.
 - `prefers-reduced-motion`: static arcs, no particles, no pulse, no fade.
 - Resize: a `ResizeObserver` relays out; the canvas is sized by
@@ -158,7 +160,9 @@ dashboard (Vercel)
 ### States
 
 - Loading: header and outline only.
-- Error after data: keep the last good data.
+- Error after data: keep the last good data. SWR's polling pauses while a key
+  is in error and its default retries stop, so the page retries forever: 30 s,
+  doubling, then every 15 minutes.
 - No data ever: "Live data is unavailable right now." under the header.
 
 ## Testing

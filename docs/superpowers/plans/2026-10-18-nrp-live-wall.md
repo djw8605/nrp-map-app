@@ -91,8 +91,8 @@
 **Files:** create `pages/api/wall.js`, `components/wall/useWallData.js`, `components/wall/WallMap.js`, `components/wall/WallTiles.js`, `components/wall/WallSpotlight.js`, `components/wall/WallLegend.js`, `pages/wall.js`.
 
 - [ ] Route: copy `usageByRegion.js`, `WALL_PUBLIC_URL`.
-- [ ] `useWallData`: SWR on `/api/wall` with `refreshInterval: 15 min`, `keepPreviousData`, and the outline file.
-- [ ] `WallMap`: SVG outline + canvas; static layer (arcs, dots, labels) redrawn on data, layout or spotlight change; animation layer (particles, home pulse) per frame; reduced motion draws once.
+- [ ] `useWallData`: SWR on `/api/wall` with `refreshInterval: 15 min` and an `onErrorRetry` that never gives up (SWR's polling pauses while a key is in error), plus the outline file.
+- [ ] `WallMap`: SVG outline + canvas composed per frame from a base layer (arcs, dots), the motion (particles, home pulse) and a top layer (labels, margin captions); the two offscreen layers redraw only on data, size or spotlight change; reduced motion draws once.
 - [ ] Spotlight rotates every 7 s and tells the map which flow to brighten.
 - [ ] `npm run build` passes.
 
