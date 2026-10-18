@@ -531,7 +531,8 @@ thead {
   --wall-bg: #050811;
   --wall-ink: #eef3fb;
   --wall-muted: #93a3bd;
-  --wall-faint: #66768f;
+  /* 5.1:1 or better on every part of the background (WCAG AA). */
+  --wall-faint: #7888a1;
   --wall-line: rgba(148, 177, 220, 0.14);
   --wall-blue: #5cc8ff;
   --wall-amber: #ffb547;

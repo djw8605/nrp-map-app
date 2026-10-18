@@ -91,14 +91,15 @@ const labelFont = (kind, size) => {
 
 const titleLines = (name) => wrapLabel(shortName(name)).map((text) => ({ text, kind: 'title' }));
 
-// A margin caption's box, so labels keep clear of it.
-function captionBoxes(ctx, scene, fit, fontSize) {
+// A margin caption's box, kept on screen, so labels keep clear of it.
+function captionBoxes(ctx, scene, fit, fontSize, size) {
   ctx.font = labelFont('place', fontSize);
   const width = Math.ceil(ctx.measureText(MARGIN_CAPTION.toUpperCase()).width * 1.15);
   const height = Math.round(fontSize * 1.2);
   return Object.values(scene.margins).map(({ x, top }) => {
-    const [cx, cy] = toScreen([x, top - CAPTION_RISE], fit);
-    return { key: 'caption', x: cx - width / 2, y: cy - height / 2, width, height, cx, cy };
+    const [columnX, cy] = toScreen([x, top - CAPTION_RISE], fit);
+    const left = Math.min(Math.max(columnX - width / 2, 4), size.width - 4 - width);
+    return { key: 'caption', x: left, y: cy - height / 2, width, height, cx: left + width / 2, cy };
   });
 }
 
@@ -130,12 +131,21 @@ function layoutLabels(ctx, scene, fit, size, fontSize, captions) {
     });
   }
   // Margin places next: a dot out in the ocean means nothing without its label.
-  // Their place leads, since "Daejeon, South Korea" says more here than the name.
+  // In a stacked column a label above its dot would read as the label of the dot
+  // over it, so these go below only, in at most two lines. The place leads
+  // ("Daejeon, South Korea" says more here than the name), and the name follows
+  // only if it fits on one line.
   const hosts = scene.sites.filter((site) => !site.isHome);
-  const margin = { spots: ['below', 'above'] };
+  const margin = { spots: ['below'] };
+  const maxNameWidth = fontSize * 11;
   hosts.filter((site) => site.side).forEach((site) => {
-    const name = wrapLabel(shortName(site.name)).map((text) => ({ text, kind: 'place' }));
-    add(site.name, site, site.r, site.place ? [{ text: site.place, kind: 'title' }, ...name] : titleLines(site.name), margin);
+    if (!site.place) {
+      add(site.name, site, site.r, titleLines(site.name), margin);
+      return;
+    }
+    const name = { text: shortName(site.name), kind: 'place' };
+    const fits = measure([name]).width <= maxNameWidth;
+    add(site.name, site, site.r, [{ text: site.place, kind: 'title' }, ...(fits ? [name] : [])], margin);
   });
   scene.origins
     .filter((origin) => origin.side && !origin.isHome)
@@ -274,7 +284,7 @@ function drawBase(ctx, scene, fit, size, spotlightKey) {
 function drawTop(ctx, scene, fit, size) {
   ctx.clearRect(0, 0, size.width, size.height);
   const fontSize = Math.round(Math.max(12, Math.min(size.height * 0.03, size.width * 0.017)));
-  const captions = captionBoxes(ctx, scene, fit, fontSize);
+  const captions = captionBoxes(ctx, scene, fit, fontSize, size);
   ctx.font = labelFont('place', fontSize);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
