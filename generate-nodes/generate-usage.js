@@ -12,40 +12,16 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { uploadToR2 } = require('./r2');
+const { callAccounting, lookupRor } = require('./clients');
 const lib = require('./usage-lib');
 
-const ACCOUNTING_API_URL = (
-  process.env.ACCOUNTING_API_URL || 'https://nrp-accounting-mcp.nrp-nautilus.io/openapi'
-).replace(/\/$/, '');
 // The last published copy doubles as the ROR cache: the job starts from a fresh
 // clone every run, so there is nowhere else to keep it.
 const USAGE_PUBLIC_URL = process.env.USAGE_PUBLIC_URL || 'https://dash-api.nrp.ai/usage-by-region.json';
-const ROR_API_URL = 'https://api.ror.org/v2/organizations';
 const OUTPUT_KEY = 'usage-by-region.json';
 // The accounting API caps `limit` at 5000; checkRowLimit fails the run if a
 // result reaches it.
 const ROW_LIMIT = 5000;
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function withRetries(label, fn, attempts = 3) {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (attempt >= attempts) throw error;
-      console.log(`${label} failed (attempt ${attempt}): ${error.message}; retrying`);
-      await sleep(1000 * 2 ** (attempt - 1));
-    }
-  }
-}
-
-async function callAccounting(tool, body) {
-  const response = await withRetries(`Accounting ${tool}`, () =>
-    axios.post(`${ACCOUNTING_API_URL}/${tool}`, body, { timeout: 120000 }),
-  );
-  return response.data;
-}
 
 async function fetchPrevious() {
   try {
@@ -55,13 +31,6 @@ async function fetchPrevious() {
     console.log(`No previous ${OUTPUT_KEY} (${error.message}); resolving every institution fresh`);
     return null;
   }
-}
-
-async function lookupRor(name) {
-  const response = await withRetries(`ROR "${name}"`, () =>
-    axios.get(ROR_API_URL, { params: { affiliation: name }, timeout: 30000 }),
-  );
-  return lib.pickRorMatch(response.data?.items, name);
 }
 
 function loadOverrides() {
