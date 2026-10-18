@@ -15,7 +15,8 @@ const SPOTLIGHT_MS = 7000;
  * Computing Center offices. No navbar or footer, sized in viewport units, and
  * written for people who have never heard of the NRP. Data: /api/wall
  * (generate-nodes/generate-wall.js). See
- * docs/superpowers/specs/2026-10-18-nrp-live-wall-design.md.
+ * docs/superpowers/specs/2026-10-18-nrp-live-wall-design.md and
+ * docs/superpowers/specs/2026-10-18-wall-focus-and-30-days-design.md.
  */
 export default function WallPage() {
   const { wall, outline, unavailable } = useWallData();
@@ -29,6 +30,13 @@ export default function WallPage() {
     return () => clearInterval(timer);
   }, [spotlights]);
   const spotlight = spotlights.length > 0 ? spotlights[tick % spotlights.length] : null;
+
+  // The institution in amber: home until someone picks a dot, and home again if
+  // a refresh drops the pick from the map. Picking needs the per-institution
+  // figures, which an older wall.json does not have.
+  const [picked, setPicked] = useState(null);
+  const canPick = Boolean(wall?.institutions);
+  const focus = canPick && picked && wall.institutions[picked] ? picked : wall?.home?.institution;
 
   return (
     <>
@@ -54,12 +62,19 @@ export default function WallPage() {
           </div>
         ) : (
           <>
-            <WallMap wall={wall} outline={outline} spotlight={spotlight} reducedMotion={reducedMotion} />
+            <WallMap
+              wall={wall}
+              outline={outline}
+              spotlight={spotlight}
+              reducedMotion={reducedMotion}
+              focus={focus}
+              onPick={canPick ? setPicked : null}
+            />
             {wall && (
               <>
                 <WallSpotlight flow={spotlight} />
-                <WallLegend wall={wall} />
-                <WallTiles wall={wall} />
+                <WallLegend wall={wall} focus={focus} />
+                <WallTiles wall={wall} focus={focus} />
               </>
             )}
           </>

@@ -615,10 +615,15 @@ thead {
   display: grid;
   grid-column: 2;
   grid-row: 2 / span 3;
-  /* The home tile has a line more than the others. */
-  grid-template-rows: repeat(4, minmax(0, 1fr)) minmax(0, 1.2fr);
-  gap: 1.2vh;
+  /* The AI tile's note runs to two lines, and the home tile has a kicker that
+     wraps to two for a long name ("Here at Korea Institute of Science &
+     Technology Information"). */
+  grid-template-rows: repeat(3, minmax(0, 1fr)) minmax(0, 1.12fr) minmax(0, 1.36fr);
+  gap: 0.9vh;
   min-height: 0;
+  /* The column takes the height the grid gives it and never pushes back, so
+     picking a long name cannot shrink the map. */
+  contain: size;
 }
 
 .wall-tile {
@@ -669,6 +674,73 @@ thead {
   font-size: min(1.7vh, 1vw);
   line-height: 1.3;
   color: var(--wall-muted);
+}
+
+/* The day's figure and the last 30 days', side by side at one size. */
+.wall-tile-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1vw;
+}
+.wall-tile-pair .wall-tile-value {
+  font-size: min(3.9vh, 2.2vw);
+  white-space: nowrap;
+}
+.wall-tile-pair + .wall-tile-label {
+  margin-top: 0.2vh;
+}
+.wall-tile-caption {
+  margin-bottom: 0.2vh;
+  line-height: 1.2;
+  font-size: min(1.3vh, 0.75vw);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wall-faint);
+}
+.wall-tile-unit {
+  font-size: 0.55em;
+  font-weight: 600;
+}
+
+/* Taps should pick at once, not wait to see if they are a double-tap zoom. */
+.wall-map {
+  touch-action: manipulation;
+}
+.wall-map-pointing {
+  cursor: pointer;
+}
+/* The name of the dot under the pointer (or just tapped), above the dot. */
+/* Two legend texts in one cell: the cell is as wide as the longer one. */
+.wall-legend-swap {
+  display: inline-grid;
+}
+.wall-legend-swap > * {
+  grid-area: 1 / 1;
+}
+.wall-legend-hidden {
+  visibility: hidden;
+}
+
+.wall-tip {
+  position: absolute;
+  z-index: 1;
+  padding: 0.5vh 0.7vw;
+  border: 1px solid rgba(148, 177, 220, 0.3);
+  border-radius: 0.8vh;
+  background: rgba(5, 8, 17, 0.92);
+  font-size: min(1.9vh, 1.1vw);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--wall-ink);
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+}
+.wall-tip-start {
+  transform: translate(-1.2vw, -100%);
+}
+.wall-tip-end {
+  transform: translate(calc(-100% + 1.2vw), -100%);
 }
 
 .wall-legend {

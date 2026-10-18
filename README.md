@@ -80,8 +80,15 @@ offices, for people who have never heard of the NRP. It explains GPUs and the NR
 in one plain sentence, then shows one day of real GPU work: host campuses as
 glowing dots sized by the GPU hours they ran, and light moving along arcs from
 each researcher's campus to the campus whose GPUs ran the work. Five tiles give
-the day's totals, and a line under the map rotates through the longest-distance
-partnerships. The home institution is amber, with a "You are here" label.
+the day's totals beside the last 30 days', and a line under the map rotates
+through the largest long-distance partnerships. The home institution is amber,
+with a "You are here" label.
+
+- Hover a dot (mouse) to see the institution's name. Click or tap one to make it
+  the amber one: the amber tile then reads "Here at the University of Missouri"
+  with its numbers (GPU hours it ran for others, or, for a campus with no GPUs,
+  hours its researchers used elsewhere). A pick stays until someone picks
+  another dot; a page reload goes back to the home institution.
 
 - Data: `/api/wall` proxies `wall.json` from R2 (`WALL_PUBLIC_URL`), published
   every 6 hours by `generate-nodes/generate-wall.js` (contract in

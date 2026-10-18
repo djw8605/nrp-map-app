@@ -38,13 +38,15 @@ unavailable"; the Contributors view is unaffected.
 
 `generate-wall.js` publishes `wall.json` for the `/wall` kiosk page: one day of GPU
 work, by the researcher's institution and by the campus whose GPUs ran it, with
-both sides placed on the map.
+both sides placed on the map, plus totals and per-institution figures for the 30
+days ending on that day.
 
 - Data: the same accounting API, for its `latest_data_date`.
   `query_resource_usage` with `resource: "gpu"` grouped by `institution` (the
   researcher's home) and `node_institution` (the campus hosting the hardware),
-  and `query_llm_token_usage` grouped by `model`, summed. A result that reaches
-  the 5000-row limit fails the run.
+  and `query_llm_token_usage` grouped by `model`, summed. The same queries run
+  again for the 30 days ending on that day (about 800 GPU rows). A result that
+  reaches the 5000-row limit fails the run.
 - Both sides of every pair are placed the way `generate-usage.js` places
   institutions: `institution-overrides.json`, then the published
   `usage-by-region.json`, then ROR. A host still unplaced takes its Netbox
@@ -84,7 +86,22 @@ both sides placed on the map.
       "from_lat": 32.71571, "from_lng": -117.16472, "to_lat": 42.20426, "to_lng": -72.6162
     }
   ],
-  "unmapped": [{ "name": "The Open Force Field Consortium", "side": "user", "gpu_hours": 72.25 }]
+  "unmapped": [{ "name": "The Open Force Field Consortium", "side": "user", "gpu_hours": 72.25 }],
+  "month": {
+    "start": "2026-09-18", "end": "2026-10-17",
+    "totals": {
+      "gpu_hours": 606687.08, "gpu_years": 69.257, "away_share": 0.7718,
+      "host_sites": 44, "user_institutions": 69,
+      "llm_tokens": 179835260870, "llm_novels": 1498627.2
+    }
+  },
+  "institutions": {
+    "University of Missouri": {
+      "hosts": true,
+      "day": { "served_hours": 435.58, "served_partners": 9, "away_hours": 1389.42, "away_hosts": 11 },
+      "month": { "served_hours": 11158.58, "served_partners": 30, "away_hours": 59112, "away_hosts": 31 }
+    }
+  }
 }
 ```
 
@@ -100,6 +117,8 @@ both sides placed on the map.
 | `sites[]` | Placed host campuses, by `hosted_hours` (all work run there). `place` is "City, ST" or "City, Country" from ROR, a region name for an override, or null for a Netbox match. |
 | `flows[]` | Placed pairs 10 or more miles apart, by `gpu_hours`. `miles` is great-circle. `from_*`/`to_*` are the two ends' coordinates, so a user campus that hosts nothing can still be drawn. |
 | `unmapped[]` | Each name and side that could not be placed, by GPU hours. |
+| `month` | The 30 days ending on `day` (`start` to `end`, inclusive); `totals` has the same fields as the top-level `totals`. |
+| `institutions` | For every name with a dot on the map (each `sites[].name` and `flows[].from`), what the page's amber tile shows when it is picked, for the day and for the month. `served_hours`/`served_partners`: hours run on its GPUs for other institutions, and how many. `away_hours`/`away_hosts`: hours its researchers ran on other institutions' GPUs, and on how many. The institution is matched by name; the other side counts as another institution unless its name matches or it is placed within 10 miles. `hosts`: it ran any GPU hours in either window (the page then shows `served_*`, else `away_*`). |
 
 Hours are rounded to two decimals; `lat`/`lng` are as resolved.
 
@@ -118,7 +137,9 @@ after this change lands:
 5. Open `/wall` on the office screen in a full-screen (kiosk) browser.
 
 Until the file is published, `/wall` shows "Live data is unavailable right now.";
-nothing else on the dashboard depends on it.
+nothing else on the dashboard depends on it. A `wall.json` without `month` and
+`institutions` (from before the 30-day figures) still renders: one figure per
+tile, and dots cannot be picked.
 
 ## Requirements
 
