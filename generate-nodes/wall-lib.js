@@ -18,6 +18,8 @@ const NETBOX_SPREAD_MILES = 50;
 const HOURS_PER_YEAR = 8760;
 // About one 90,000-word novel.
 const TOKENS_PER_NOVEL = 120000;
+// The longer window the tiles show beside the day, ending on the day.
+const MONTH_DAYS = 30;
 const EARTH_RADIUS_MILES = 3958.8;
 
 const byName = (a, b) => a.localeCompare(b);
@@ -108,18 +110,83 @@ function placeFromRorOrganization(org) {
   return area ? `${location.name}, ${area}` : location.name;
 }
 
-/*
- * `locations` maps every user and host name to { lat, lng } or null; `places`
- * maps placed host names to a place label or null. See the spec for the meaning
- * of each field.
- */
-function buildWallDocument({ day, generatedAt, pairs, gpuHours, llmTokens, locations, places = {}, home = DEFAULT_HOME }) {
-  const at = (name) => (name && locations[name]) || null;
-  const homeKey = normalizeName(home);
-  const homeAt = Object.keys(locations)
-    .filter((name) => normalizeName(name) === homeKey)
+// First day of the MONTH_DAYS-day window ending on `day` (YYYY-MM-DD, UTC).
+function windowStart(day, days = MONTH_DAYS) {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - (days - 1));
+  return date.toISOString().slice(0, 10);
+}
+
+// The point of any name written like `key`, e.g. the home under either spelling.
+function pointOf(locations, key) {
+  return Object.keys(locations)
+    .filter((name) => normalizeName(name) === key)
     .map((name) => locations[name])
     .find(Boolean) || null;
+}
+
+/*
+ * One institution's work with others, the amber tile's numbers when it is picked
+ * on the page. The institution itself is found by name (its spellings normalise
+ * alike); the other side of each pair counts as "another institution" unless it
+ * has the same name or is placed within LOCAL_MILES of it, the home rule of
+ * buildWallDocument. An unplaced name that differs counts as another
+ * institution; an unattributed side (null) counts toward neither.
+ *
+ *   served: hours run on its GPUs for others, and how many users that was
+ *   away:   hours its researchers ran on others' GPUs, and how many hosts
+ *   hosted: whether it ran any GPU hours at all
+ */
+function institutionFigures(pairs, locations, name) {
+  const key = normalizeName(name);
+  const point = pointOf(locations, key);
+  const at = (other) => (other && locations[other]) || null;
+  const isSelf = (other) =>
+    normalizeName(other) === key || (Boolean(point && at(other)) && milesBetween(point, at(other)) < LOCAL_MILES);
+
+  const partners = new Set();
+  const hosts = new Set();
+  let servedHours = 0;
+  let awayHours = 0;
+  let hosted = false;
+
+  for (const { user, host, hours } of pairs) {
+    if (host && normalizeName(host) === key) {
+      hosted = true;
+      if (user && !isSelf(user)) {
+        servedHours += hours;
+        partners.add(normalizeName(user));
+      }
+    }
+    if (user && host && normalizeName(user) === key && !isSelf(host)) {
+      awayHours += hours;
+      hosts.add(normalizeName(host));
+    }
+  }
+  return {
+    hosted,
+    figures: {
+      served_hours: round(servedHours, 2),
+      served_partners: partners.size,
+      away_hours: round(awayHours, 2),
+      away_hosts: hosts.size,
+    },
+  };
+}
+
+/*
+ * `locations` maps every user and host name to { lat, lng } or null; `places`
+ * maps placed host names to a place label or null. With `month` ({ start, end,
+ * pairs, gpuHours, llmTokens }, located by the same `locations`), the document
+ * also carries the month's totals and the per-institution figures for every dot
+ * on the map. See the specs for the meaning of each field.
+ */
+function buildWallDocument({
+  day, generatedAt, pairs, gpuHours, llmTokens, locations, places = {}, home = DEFAULT_HOME, month = null,
+}) {
+  const at = (name) => (name && locations[name]) || null;
+  const homeKey = normalizeName(home);
+  const homeAt = pointOf(locations, homeKey);
   const near = (a, b) => Boolean(a && b) && milesBetween(a, b) < LOCAL_MILES;
   const isLocal = (user, from, host, to) => normalizeName(user) === normalizeName(host) || near(from, to);
   const isHome = (user, from) => normalizeName(user) === homeKey || near(from, homeAt);
@@ -189,7 +256,7 @@ function buildWallDocument({ day, generatedAt, pairs, gpuHours, llmTokens, locat
   const byHours = (key) => (a, b) => b[key] - a[key];
   const roundHours = (entry, key) => ({ ...entry, [key]: round(entry[key], 2) });
 
-  return {
+  const doc = {
     generated_at: generatedAt,
     day,
     totals: {
@@ -216,6 +283,28 @@ function buildWallDocument({ day, generatedAt, pairs, gpuHours, llmTokens, locat
       .sort((a, b) => byHours('gpu_hours')(a, b) || byName(a.name, b.name))
       .map((entry) => roundHours(entry, 'gpu_hours')),
   };
+  if (!month) return doc;
+
+  const { totals: monthTotals } = buildWallDocument({
+    day: month.end, generatedAt, pairs: month.pairs, gpuHours: month.gpuHours, llmTokens: month.llmTokens, locations, home,
+  });
+  // Every name the page draws a dot for: placed hosts and the starts of arcs.
+  const dots = [...new Set([...doc.sites.map((site) => site.name), ...doc.flows.map((flow) => flow.from)])].sort(byName);
+  const institutions = {};
+  for (const name of dots) {
+    const dayFigures = institutionFigures(pairs, locations, name);
+    const monthFigures = institutionFigures(month.pairs, locations, name);
+    institutions[name] = {
+      hosts: dayFigures.hosted || monthFigures.hosted,
+      day: dayFigures.figures,
+      month: monthFigures.figures,
+    };
+  }
+  return {
+    ...doc,
+    month: { start: month.start, end: month.end, totals: monthTotals },
+    institutions,
+  };
 }
 
 // Why the document must not be published, or null if it can be.
@@ -230,7 +319,10 @@ module.exports = {
   LOCAL_MILES,
   HOURS_PER_YEAR,
   TOKENS_PER_NOVEL,
+  MONTH_DAYS,
   normalizeName,
+  windowStart,
+  institutionFigures,
   milesBetween,
   collectPairs,
   sumTokens,

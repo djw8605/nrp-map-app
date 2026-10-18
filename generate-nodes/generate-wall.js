@@ -1,12 +1,14 @@
 /*
  * Publishes wall.json for the /wall kiosk page: one day of GPU work by
  * researcher's institution and by the campus whose GPUs ran it, with both
- * placed on the map. Runs after generate-usage.js in the same CronJob.
+ * placed on the map, plus totals and per-institution figures for the 30 days
+ * ending on that day. Runs after generate-usage.js in the same CronJob.
  *
  *   node generate-wall.js            # publish to R2
  *   node generate-wall.js --dry-run  # write ./wall.json instead
  *
- * See docs/superpowers/specs/2026-10-18-nrp-live-wall-design.md.
+ * See docs/superpowers/specs/2026-10-18-nrp-live-wall-design.md and
+ * docs/superpowers/specs/2026-10-18-wall-focus-and-30-days-design.md.
  */
 const fs = require('fs');
 const path = require('path');
@@ -67,6 +69,35 @@ async function hostPlaces(hosts, resolved, rorOrganizations) {
   return places;
 }
 
+/*
+ * GPU hours by (user, host) and the LLM token total for start..end inclusive.
+ * A result that reaches the row limit, or has no GPU rows, fails the run.
+ */
+async function queryWindow(start, end) {
+  const gpu = await callAccounting('query_resource_usage', {
+    start_date: start,
+    end_date: end,
+    resource: 'gpu',
+    group_by: ['institution', 'node_institution'],
+    limit: ROW_LIMIT,
+  });
+  usageLib.checkRowLimit(gpu);
+  if (!Array.isArray(gpu.rows) || gpu.rows.length === 0) {
+    throw new Error(`Accounting API returned no GPU rows for ${start} to ${end}`);
+  }
+
+  const llm = await callAccounting('query_llm_token_usage', {
+    start_date: start,
+    end_date: end,
+    group_by: ['model'],
+    limit: ROW_LIMIT,
+  });
+  usageLib.checkRowLimit(llm);
+  if (!Array.isArray(llm.rows)) throw new Error(`Accounting API returned no LLM rows for ${start} to ${end}`);
+
+  return { ...lib.collectPairs(gpu.rows), llmTokens: lib.sumTokens(llm.rows) };
+}
+
 async function main() {
   const dryRun = process.argv.includes('--dry-run');
 
@@ -75,31 +106,21 @@ async function main() {
   const day = latest.latest_data_date;
   console.log(`Wall day: ${day}`);
 
-  const gpu = await callAccounting('query_resource_usage', {
-    start_date: day,
-    end_date: day,
-    resource: 'gpu',
-    group_by: ['institution', 'node_institution'],
-    limit: ROW_LIMIT,
-  });
-  usageLib.checkRowLimit(gpu);
-  if (!Array.isArray(gpu.rows) || gpu.rows.length === 0) {
-    throw new Error('Accounting API returned no GPU rows');
-  }
+  const dayWindow = await queryWindow(day, day);
+  console.log(
+    `${dayWindow.pairs.length} user/host pairs, ${dayWindow.gpuHours.toFixed(1)} GPU hours, ` +
+    `${Math.round(dayWindow.llmTokens)} LLM tokens`,
+  );
+  const monthStart = lib.windowStart(day);
+  const monthWindow = await queryWindow(monthStart, day);
+  console.log(
+    `${monthStart} to ${day}: ${monthWindow.pairs.length} user/host pairs, ` +
+    `${monthWindow.gpuHours.toFixed(1)} GPU hours, ${Math.round(monthWindow.llmTokens)} LLM tokens`,
+  );
 
-  const llm = await callAccounting('query_llm_token_usage', {
-    start_date: day,
-    end_date: day,
-    group_by: ['model'],
-    limit: ROW_LIMIT,
-  });
-  usageLib.checkRowLimit(llm);
-  if (!Array.isArray(llm.rows)) throw new Error('Accounting API returned no LLM rows');
-  const llmTokens = lib.sumTokens(llm.rows);
-
-  const { pairs, gpuHours } = lib.collectPairs(gpu.rows);
-  console.log(`${pairs.length} user/host pairs, ${gpuHours.toFixed(1)} GPU hours, ${Math.round(llmTokens)} LLM tokens`);
-
+  // Both windows are placed together, so the month only adds lookups for names
+  // the day did not have.
+  const pairs = [...dayWindow.pairs, ...monthWindow.pairs];
   const users = new Set(pairs.map((pair) => pair.user).filter(Boolean));
   const hosts = [...new Set(pairs.map((pair) => pair.host).filter(Boolean))].sort();
   const names = [...new Set([...users, ...hosts])].sort();
@@ -131,12 +152,18 @@ async function main() {
   const doc = lib.buildWallDocument({
     day,
     generatedAt: new Date().toISOString(),
-    pairs,
-    gpuHours,
-    llmTokens,
+    pairs: dayWindow.pairs,
+    gpuHours: dayWindow.gpuHours,
+    llmTokens: dayWindow.llmTokens,
     locations,
-    places: await hostPlaces(hosts, resolved, rorOrganizations),
+    // Place labels are only drawn for the day's sites.
+    places: await hostPlaces(
+      hosts.filter((host) => dayWindow.pairs.some((pair) => pair.host === host)),
+      resolved,
+      rorOrganizations,
+    ),
     home: HOME,
+    month: { start: monthStart, end: day, ...monthWindow },
   });
 
   const matches = names.reduce((counts, name) => {
@@ -154,6 +181,10 @@ async function main() {
   console.log(
     `${doc.sites.length} sites, ${doc.flows.length} flows, away share ${(doc.totals.away_share * 100).toFixed(1)}%; ` +
     `${doc.home.institution} ran ${doc.home.served_hours} GPU hours for ${doc.home.partner_count} other institutions`,
+  );
+  console.log(
+    `30 days: ${doc.month.totals.gpu_hours} GPU hours, away share ${(doc.month.totals.away_share * 100).toFixed(1)}%, ` +
+    `${doc.month.totals.host_sites} host sites; figures for ${Object.keys(doc.institutions).length} institutions on the map`,
   );
 
   const problem = lib.publishProblem(doc);

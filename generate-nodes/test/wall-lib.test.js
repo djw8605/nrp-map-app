@@ -89,7 +89,7 @@ test('placeFromRorOrganization labels US places by state and others by country',
   assert.equal(lib.placeFromRorOrganization(null), null);
 });
 
-function fixture(home) {
+function fixture(home, month = null) {
   const { pairs, gpuHours } = lib.collectPairs([
     // The same campus under two names, at one point: local.
     { institution: UCSD_USER, node_institution: UCSD_HOST, usage: 100 },
@@ -125,7 +125,21 @@ function fixture(home) {
     },
     places: { [UCSD_HOST]: 'San Diego, CA' },
     home,
+    month,
   });
+}
+
+// The day's pairs, with more of each, as the 30 days ending on it.
+function monthOf(day) {
+  const { pairs, gpuHours } = lib.collectPairs([
+    { institution: UCSD_USER, node_institution: UCSD_HOST, usage: 3000 },
+    { institution: 'Stanford University', node_institution: UNL, usage: 900 },
+    { institution: 'Stanford University', node_institution: UCSD_HOST, usage: 1500 },
+    { institution: UNL, node_institution: UCSD_HOST, usage: 600 },
+    { institution: 'Nebraska Wesleyan University', node_institution: UNL, usage: 150 },
+    { institution: 'Mystery Lab', node_institution: UNL, usage: 240 },
+  ]);
+  return { start: lib.windowStart(day), end: day, pairs, gpuHours, llmTokens: 7200000 };
 }
 
 test('buildWallDocument separates flows from local work and counts both in the totals', () => {
@@ -181,4 +195,77 @@ test('publishProblem refuses an empty day or a map without flows', () => {
   assert.equal(lib.publishProblem({ ...doc, totals: { ...doc.totals, gpu_hours: 0 } }), 'Total GPU hours is 0');
   assert.equal(lib.publishProblem({ ...doc, flows: [] }), 'No mapped flows');
   assert.equal(lib.publishProblem(null), 'Total GPU hours is 0');
+});
+
+test('windowStart is the first of the 30 days ending on the day', () => {
+  assert.equal(lib.windowStart('2026-10-17'), '2026-09-18');
+  assert.equal(lib.windowStart('2026-01-10'), '2025-12-12');
+  assert.equal(lib.windowStart('2026-10-17', 1), '2026-10-17');
+});
+
+test('institutionFigures matches the home figures for any institution', () => {
+  const { pairs } = lib.collectPairs([
+    { institution: 'Stanford University', node_institution: UNL, usage: 30 },
+    { institution: 'Mystery Lab', node_institution: UNL, usage: 8 },
+    { institution: 'Nebraska Wesleyan University', node_institution: UNL, usage: 5 },
+    { institution: 'University of Nebraska-Lincoln', node_institution: UNL, usage: 40 },
+    { institution: 'Unknown', node_institution: UNL, usage: 7 },
+  ]);
+  const locations = {
+    [UNL]: LINCOLN,
+    'University of Nebraska-Lincoln': LINCOLN,
+    'Stanford University': STANFORD,
+    'Nebraska Wesleyan University': { lat: 40.8384, lng: -96.6503 },
+    'Mystery Lab': null,
+  };
+  assert.deepEqual(lib.institutionFigures(pairs, locations, UNL), {
+    hosted: true,
+    figures: { served_hours: 38, served_partners: 2, away_hours: 0, away_hosts: 0 },
+  });
+});
+
+test('buildWallDocument adds the month totals and figures for every dot', () => {
+  const doc = fixture(undefined, monthOf('2026-10-17'));
+
+  assert.deepEqual(doc.month, {
+    start: '2026-09-18',
+    end: '2026-10-17',
+    totals: {
+      gpu_hours: 6390,
+      gpu_years: 0.729,
+      // 3000 of the 6150 placed hours crossed campuses.
+      away_share: 0.4878,
+      host_sites: 2,
+      user_institutions: 5,
+      llm_tokens: 7200000,
+      llm_novels: 60,
+    },
+  });
+  // The day's figures for home are the `home` block's.
+  assert.equal(doc.institutions[UNL].day.served_hours, doc.home.served_hours);
+  assert.equal(doc.institutions[UNL].day.served_partners, doc.home.partner_count);
+  assert.deepEqual(Object.keys(doc.institutions), ['Stanford University', UCSD_HOST, UNL]);
+  assert.deepEqual(doc.institutions[UNL], {
+    hosts: true,
+    day: { served_hours: 38, served_partners: 2, away_hours: 20, away_hosts: 1 },
+    month: { served_hours: 1140, served_partners: 2, away_hours: 600, away_hosts: 1 },
+  });
+  // One campus under two names is not its own partner or host.
+  assert.deepEqual(doc.institutions[UCSD_HOST], {
+    hosts: true,
+    day: { served_hours: 70, served_partners: 2, away_hours: 0, away_hosts: 0 },
+    month: { served_hours: 2100, served_partners: 2, away_hours: 0, away_hosts: 0 },
+  });
+  // Hosts nothing: only its work elsewhere, an unplaced host included.
+  assert.deepEqual(doc.institutions['Stanford University'], {
+    hosts: false,
+    day: { served_hours: 0, served_partners: 0, away_hours: 84, away_hosts: 3 },
+    month: { served_hours: 0, served_partners: 0, away_hours: 2400, away_hosts: 2 },
+  });
+});
+
+test('buildWallDocument without a month is the one-day document', () => {
+  const doc = fixture();
+  assert.equal(doc.month, undefined);
+  assert.equal(doc.institutions, undefined);
 });
