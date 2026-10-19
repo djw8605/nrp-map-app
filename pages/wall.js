@@ -51,11 +51,12 @@ export default function WallPage() {
             National Research Platform{wall ? ` · ${formatDay(wall.day)}` : ''}
           </p>
           <h1 className="wall-headline">Every day, scientists share computers nationwide.</h1>
-          <p className="wall-lede">
-            GPUs are powerful chips behind AI and science simulations, and the National Research
-            Platform lets researchers at one school use GPUs at schools across the country.
-          </p>
         </header>
+        {/* Outside the header so the tile column can start beside it (globals.css). */}
+        <p className="wall-lede">
+          GPUs are powerful chips behind AI and science simulations, and the National Research
+          Platform lets researchers at one school use GPUs at schools across the country.
+        </p>
 
         {unavailable ? (
           <div className="wall-unavailable">

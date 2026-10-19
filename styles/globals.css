@@ -540,11 +540,13 @@ thead {
   inset: 0;
   overflow: hidden;
   display: grid;
-  /* Header across the top; under it the map, spotlight and legend on the left,
-     and the tiles down the whole right side. The map is limited by its height,
-     so the tile column costs it nothing. */
-  grid-template-columns: minmax(0, 1fr) 29vw;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  /* Kicker and headline across the top; under them the lede, map, spotlight
+     and legend on the left, and the tiles down the whole right side, from the
+     lede's top. The map is limited mostly by its height, so the tile column
+     costs it little, and starting the tiles beside the lede gives them its
+     height. */
+  grid-template-columns: minmax(0, 1fr) 30vw;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   gap: 1.8vh 2.4vw;
   padding: 3.2vh 3vw 2.6vh;
   background: radial-gradient(ellipse at 38% 58%, #0b1528 0%, var(--wall-bg) 68%);
@@ -574,8 +576,10 @@ thead {
 }
 
 .wall-lede {
-  margin-top: 1.2vh;
-  max-width: 64vw;
+  grid-column: 1;
+  grid-row: 2;
+  /* As close under the headline as it sat inside the header. */
+  margin-top: -0.6vh;
   font-size: min(2.6vh, 1.5vw);
   line-height: 1.4;
   color: var(--wall-muted);
@@ -584,7 +588,7 @@ thead {
 .wall-map {
   position: relative;
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 3;
   min-height: 0;
 }
 
@@ -596,12 +600,13 @@ thead {
   height: 100%;
 }
 
-/* Two lines tall, so the map does not jump as sentences change length. */
+/* Two lines tall, so the map does not jump as sentences change length. The
+   width cap keeps a long pair of names to two lines on a 16:9 screen. */
 .wall-spotlight {
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 4;
   min-height: 2.8em;
-  font-size: min(2.5vh, 1.45vw);
+  font-size: min(2.5vh, 1.3vw);
   line-height: 1.4;
   color: var(--wall-muted);
 }
@@ -614,27 +619,37 @@ thead {
 .wall-tiles {
   display: grid;
   grid-column: 2;
-  grid-row: 2 / span 3;
-  /* The AI tile's note runs to two lines, and the home tile has a kicker that
-     wraps to two for a long name ("Here at Korea Institute of Science &
-     Technology Information"). */
-  grid-template-rows: repeat(3, minmax(0, 1fr)) minmax(0, 1.12fr) minmax(0, 1.36fr);
-  gap: 0.9vh;
+  grid-row: 2 / -1;
+  /* Each tile as tall as its text, with the rest of the column shared out
+     between them, so no text runs past a border, whatever the fonts. A long
+     name in the home tile's kicker ("Here at Korea Institute of Science &
+     Technology Information") takes its second line from that spare room. */
+  grid-template-rows: repeat(5, auto);
+  gap: 1.1vh;
   min-height: 0;
   /* The column takes the height the grid gives it and never pushes back, so
-     picking a long name cannot shrink the map. */
+     picking a long name cannot shrink the map. As a size container it also
+     sizes the tiles' text (below). */
   contain: size;
+  container-type: size;
 }
 
+/*
+ * The tiles' text is sized from the column, not the window, so it fills the
+ * column the same way whatever the header above takes; everything inside is
+ * in em. The first line is for browsers without container units.
+ */
 .wall-tile {
   display: flex;
   min-height: 0;
   flex-direction: column;
   justify-content: center;
-  padding: 1.1vh 1.3vw;
+  padding: 0.75em 1.2em;
   border: 1px solid var(--wall-line);
-  border-radius: 1.2vh;
+  border-radius: 0.7em;
   background: rgba(255, 255, 255, 0.035);
+  font-size: min(1.6vh, 0.95vw);
+  font-size: min(2cqh, 3.1cqw);
 }
 
 .wall-tile-home {
@@ -643,8 +658,9 @@ thead {
 }
 
 .wall-tile-kicker {
-  margin-bottom: 0.6vh;
-  font-size: min(1.5vh, 0.85vw);
+  margin-bottom: 0.35em;
+  font-size: 0.88em;
+  line-height: 1.25;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -652,7 +668,7 @@ thead {
 }
 
 .wall-tile-value {
-  font-size: min(4.6vh, 2.7vw);
+  font-size: 2.7em;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -663,15 +679,14 @@ thead {
 }
 
 .wall-tile-label {
-  margin-top: 0.5vh;
-  font-size: min(2vh, 1.15vw);
+  margin-top: 0.3em;
+  font-size: 1.18em;
   font-weight: 600;
   line-height: 1.25;
 }
 
 .wall-tile-note {
-  margin-top: 0.3vh;
-  font-size: min(1.7vh, 1vw);
+  margin-top: 0.2em;
   line-height: 1.3;
   color: var(--wall-muted);
 }
@@ -680,20 +695,20 @@ thead {
 .wall-tile-pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1vw;
+  gap: 1.2em;
 }
 /* One figure size down the column, whether a tile pairs two figures or shows one. */
 .wall-tiles-paired .wall-tile-value {
-  font-size: min(3.9vh, 2.2vw);
+  font-size: 2.3em;
   white-space: nowrap;
 }
 .wall-tile-pair + .wall-tile-label {
-  margin-top: 0.2vh;
+  margin-top: 0.12em;
 }
 .wall-tile-caption {
-  margin-bottom: 0.2vh;
+  margin-bottom: 0.12em;
   line-height: 1.2;
-  font-size: min(1.3vh, 0.75vw);
+  font-size: 0.76em;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -746,7 +761,7 @@ thead {
 
 .wall-legend {
   grid-column: 1;
-  grid-row: 4;
+  grid-row: 5;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -773,7 +788,7 @@ thead {
 
 .wall-unavailable {
   grid-column: 1 / -1;
-  grid-row: 2 / span 3;
+  grid-row: 3 / -1;
   display: flex;
   flex-direction: column;
   align-items: center;
