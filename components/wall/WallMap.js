@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ORIGIN_RADIUS,
   buildScene,
   fitBox,
   hitTest,
+  nameKey,
   placeLabels,
   pointOnArc,
   scenePoints,
@@ -35,10 +37,17 @@ const MUTED = '#93a3bd';
 const HALO = 'rgba(5, 8, 17, 0.92)';
 const rgba = ([r, g, b], alpha) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
 
-// Particle speed, in outline pixels per second, and trail length in dots.
+// Particle speed, in outline pixels per second, and trail length in dots. The
+// ambient particles are texture; they stay quiet so the spotlight's comet and
+// the tiles' counter read as the things that happen.
 const SPEED = 110;
-const TRAIL = 5;
-const PULSE_MS = 2600;
+const TRAIL = 3;
+const PULSE_MS = 4000;
+// The spotlight's comet: its flight from the researcher's campus to the host,
+// then the ring it lands with. After that the scene rests until the next one.
+const COMET_MS = 2600;
+const LANDING_MS = 1100;
+const COMET_TAIL = 16;
 // Hosts in the 50 states that get a label, besides home. Margin places always do.
 const LABELLED_HOSTS = 7;
 const MARGIN_CAPTION = 'Outside the US';
@@ -112,7 +121,7 @@ function captionBoxes(ctx, scene, fit, fontSize, size) {
   });
 }
 
-function layoutLabels(ctx, scene, fit, size, fontSize, captions) {
+function layoutLabels(ctx, scene, fit, size, fontSize, captions, lit) {
   const lineHeight = Math.round(fontSize * 1.25);
   const measure = (lines) => {
     let width = 0;
@@ -128,10 +137,14 @@ function layoutLabels(ctx, scene, fit, size, fontSize, captions) {
   };
 
   const candidates = [];
+  const added = new Set();
   const add = (key, point, r, lines, options = {}) => {
+    if (added.has(key)) return;
+    added.add(key);
     candidates.push({ key, ...onScreen(point, r), lines, ...measure(lines), ...options });
   };
 
+  const withPlace = (site) => [...titleLines(site.name), ...(site.place ? [{ text: site.place, kind: 'place' }] : [])];
   // "You are here" only at the real home; a picked campus is named alone.
   const { home } = scene;
   if (home) {
@@ -140,6 +153,23 @@ function layoutLabels(ctx, scene, fit, size, fontSize, captions) {
       spots: ['above', 'right', 'left', 'below'],
       home: true,
     });
+  }
+  // The spotlight's two ends next, so the sentence under the map can be found
+  // on it. Margin places are labelled anyway, and home already is.
+  if (lit) {
+    const homeKey = nameKey(home?.name);
+    const ends = [
+      { name: lit.from, point: { x: lit.a[0], y: lit.a[1] } },
+      { name: lit.to, point: { x: lit.b[0], y: lit.b[1] } },
+    ];
+    for (const end of ends) {
+      const site = scene.sites.find((entry) => nameKey(entry.name) === nameKey(end.name));
+      if (nameKey(end.name) === homeKey || site?.side) continue;
+      const origin = scene.origins.find((entry) => entry.name === end.name);
+      if (origin?.side) continue;
+      const name = site?.name || end.name;
+      add(name, end.point, site?.r || ORIGIN_RADIUS, site ? withPlace(site) : titleLines(name), { spotlight: true });
+    }
   }
   // Margin places next: a dot out in the ocean means nothing without its label.
   // In a stacked column a label above its dot would read as the label of the dot
@@ -161,7 +191,6 @@ function layoutLabels(ctx, scene, fit, size, fontSize, captions) {
   scene.origins
     .filter((origin) => origin.side && !origin.isHome)
     .forEach((origin) => add(origin.name, origin, 2, titleLines(origin.name), margin));
-  const withPlace = (site) => [...titleLines(site.name), ...(site.place ? [{ text: site.place, kind: 'place' }] : [])];
   hosts.filter((site) => !site.side).slice(0, LABELLED_HOSTS).forEach((site) => add(site.name, site, site.r, withPlace(site)));
 
   const obstacles = [
@@ -182,7 +211,7 @@ function layoutLabels(ctx, scene, fit, size, fontSize, captions) {
 function drawLabels(ctx, labels, fontSize) {
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
-  for (const { box, lines, lineHeight, home } of labels) {
+  for (const { box, lines, lineHeight, home, spotlight } of labels) {
     const align = box.spot === 'right' ? 'left' : box.spot === 'left' ? 'right' : 'center';
     const x = align === 'left' ? box.x : align === 'right' ? box.x + box.width : box.x + box.width / 2;
     ctx.textAlign = align;
@@ -194,7 +223,7 @@ function drawLabels(ctx, labels, fontSize) {
       ctx.strokeText(line.text, x, y);
       if (line.kind === 'kicker') ctx.fillStyle = rgba(AMBER, 1);
       else if (line.kind === 'place') ctx.fillStyle = MUTED;
-      else ctx.fillStyle = home ? '#ffe2b0' : INK;
+      else ctx.fillStyle = home ? '#ffe2b0' : spotlight ? '#ffffff' : INK;
       ctx.fillText(line.text, x, y);
     });
   }
@@ -292,7 +321,7 @@ function drawBase(ctx, scene, fit, size, spotlightKey) {
 }
 
 // Labels and margin captions: everything over the particles.
-function drawTop(ctx, scene, fit, size) {
+function drawTop(ctx, scene, fit, size, lit) {
   ctx.clearRect(0, 0, size.width, size.height);
   const fontSize = Math.round(Math.max(12, Math.min(size.height * 0.03, size.width * 0.017)));
   const captions = captionBoxes(ctx, scene, fit, fontSize, size);
@@ -303,20 +332,22 @@ function drawTop(ctx, scene, fit, size) {
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${Math.round(fontSize * 0.12)}px`;
   for (const { cx, cy } of captions) ctx.fillText(MARGIN_CAPTION.toUpperCase(), cx, cy);
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-  drawLabels(ctx, layoutLabels(ctx, scene, fit, size, fontSize, captions), fontSize);
+  drawLabels(ctx, layoutLabels(ctx, scene, fit, size, fontSize, captions, lit), fontSize);
 }
 
-function drawMotion(ctx, scene, fit, now, spotlightKey) {
+function drawMotion(ctx, scene, fit, now, spotlightKey, cometActive) {
   const s = fit.scale;
   const seconds = now / 1000;
   ctx.globalCompositeOperation = 'lighter';
   for (const flow of scene.flows) {
     const lit = flowKey(flow) === spotlightKey;
+    // While the comet flies, it is the lit arc's only light.
+    if (lit && cometActive) continue;
     const duration = Math.max(1.5, flow.length / SPEED);
     // Trail dots about 3 outline pixels apart.
     const step = 3 / Math.max(1, flow.length);
     const color = lit ? WHITE : PARTICLE;
-    const alpha = lit ? 1 : spotlightKey ? 0.45 : 0.7;
+    const alpha = lit ? 0.85 : spotlightKey ? 0.3 : 0.5;
     const radius = (lit ? 2.2 : 0.9 + flow.width * 0.3) * s;
     for (let i = 0; i < flow.particles; i++) {
       // The golden-ratio offset keeps flows from moving in step with each other.
@@ -335,16 +366,58 @@ function drawMotion(ctx, scene, fit, now, spotlightKey) {
   ctx.globalCompositeOperation = 'source-over';
 }
 
+// One slow ring: enough to say "here" without becoming the screen's metronome.
 function drawPulse(ctx, home, fit, now) {
   const [x, y] = toScreen([home.x, home.y], fit);
   const base = ((home.r || 3) + 5) * fit.scale;
-  for (const offset of [0, 0.5]) {
-    const phase = (now / PULSE_MS + offset) % 1;
-    circle(ctx, x, y, base + 26 * fit.scale * phase);
-    ctx.strokeStyle = rgba(AMBER, 0.7 * (1 - phase));
-    ctx.lineWidth = Math.max(1, 2.4 * fit.scale * (1 - phase));
+  const phase = (now / PULSE_MS) % 1;
+  circle(ctx, x, y, base + 26 * fit.scale * phase);
+  ctx.strokeStyle = rgba(AMBER, 0.6 * (1 - phase));
+  ctx.lineWidth = Math.max(1, 2.2 * fit.scale * (1 - phase));
+  ctx.stroke();
+}
+
+const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+const easeOut = (t) => 1 - (1 - t) ** 3;
+
+/*
+ * The spotlight told as one event: a comet leaves the researcher's campus,
+ * eases along the arc and lands on the host's GPUs with a single ring.
+ * `elapsed` is the time since the spotlight changed; past the landing it draws
+ * nothing and the lit arc's ordinary particles take over.
+ */
+function drawComet(ctx, flow, hostR, fit, elapsed) {
+  const s = fit.scale;
+  ctx.globalCompositeOperation = 'lighter';
+  if (elapsed < COMET_MS) {
+    const t = easeInOut(elapsed / COMET_MS);
+    // The tail spans a fixed length of arc, shorter at the start so it grows out of the dot.
+    const span = Math.min(t, 0.16);
+    for (let k = COMET_TAIL; k >= 0; k--) {
+      const along = t - (span * k) / COMET_TAIL;
+      const [x, y] = toScreen(pointOnArc(flow.a, flow.c, flow.b, along), fit);
+      const fade = 1 - k / (COMET_TAIL + 1);
+      ctx.fillStyle = rgba(k === 0 ? WHITE : PARTICLE, fade * fade);
+      circle(ctx, x, y, Math.max(0.8, (k === 0 ? 4.2 : 3 * fade) * s));
+      ctx.fill();
+    }
+    const [x, y] = toScreen(pointOnArc(flow.a, flow.c, flow.b, t), fit);
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, 20 * s);
+    glow.addColorStop(0, rgba(WHITE, 0.55));
+    glow.addColorStop(0.35, rgba(PARTICLE, 0.18));
+    glow.addColorStop(1, rgba(PARTICLE, 0));
+    ctx.fillStyle = glow;
+    circle(ctx, x, y, 20 * s);
+    ctx.fill();
+  } else if (elapsed < COMET_MS + LANDING_MS) {
+    const p = (elapsed - COMET_MS) / LANDING_MS;
+    const [x, y] = toScreen(flow.b, fit);
+    circle(ctx, x, y, (hostR + 4.5 + 20 * easeOut(p)) * s);
+    ctx.strokeStyle = rgba(WHITE, 0.85 * (1 - p));
+    ctx.lineWidth = Math.max(1, 2 * s * (1 - p));
     ctx.stroke();
   }
+  ctx.globalCompositeOperation = 'source-over';
 }
 
 /*
@@ -426,6 +499,11 @@ export default function WallMap({ wall, outline, spotlight, reducedMotion, focus
   const box = scene?.box || (outline ? worldBox(outline.bounds) : null);
   const spotlightKey = spotlight ? flowKey(spotlight) : null;
   const { tip, handlers } = usePointer({ scene, size, onPick });
+  // When the spotlight last changed, on the animation clock: its comet's start.
+  const cometStart = useRef(0);
+  useEffect(() => {
+    cometStart.current = performance.now();
+  }, [spotlightKey]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -450,7 +528,9 @@ export default function WallMap({ wall, outline, spotlight, reducedMotion, focus
       return offscreen;
     };
     const base = layer(baseRef, (layerContext) => drawBase(layerContext, scene, fit, size, spotlightKey));
-    const top = layer(topRef, (layerContext) => drawTop(layerContext, scene, fit, size));
+    const lit = scene.flows.find((flow) => flowKey(flow) === spotlightKey) || null;
+    const litHostR = lit ? scene.sites.find((site) => site.name === lit.to)?.r || ORIGIN_RADIUS : 0;
+    const top = layer(topRef, (layerContext) => drawTop(layerContext, scene, fit, size, lit));
 
     const context = canvas.getContext('2d');
     let frame = 0;
@@ -460,7 +540,10 @@ export default function WallMap({ wall, outline, spotlight, reducedMotion, focus
       context.drawImage(base, 0, 0);
       if (!reducedMotion) {
         context.setTransform(dpr, 0, 0, dpr, 0, 0);
-        drawMotion(context, scene, fit, now, spotlightKey);
+        const elapsed = now - cometStart.current;
+        const cometActive = Boolean(lit) && elapsed < COMET_MS + LANDING_MS;
+        drawMotion(context, scene, fit, now, spotlightKey, cometActive);
+        if (cometActive) drawComet(context, lit, litHostR, fit, elapsed);
         if (scene.home) drawPulse(context, scene.home, fit, now);
         context.setTransform(1, 0, 0, 1, 0, 0);
       }

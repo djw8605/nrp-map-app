@@ -6,9 +6,10 @@ import WallSpotlight from '../components/wall/WallSpotlight';
 import WallTiles from '../components/wall/WallTiles';
 import { usePrefersReducedMotion } from '../components/wall/usePrefersReducedMotion';
 import { useWallData } from '../components/wall/useWallData';
-import { formatDay, spotlightFlows } from '../lib/wall';
+import { canonicalNames, formatDay, spotlightFlows } from '../lib/wall';
 
-const SPOTLIGHT_MS = 7000;
+// Long enough to read a two-line sentence and watch its comet land (WallMap.js).
+const SPOTLIGHT_MS = 11000;
 
 /*
  * NRP Live Wall: a full-screen kiosk page for the big screen in the UNL Holland
@@ -22,7 +23,8 @@ export default function WallPage() {
   const { wall, outline, unavailable } = useWallData();
   const reducedMotion = usePrefersReducedMotion();
 
-  const spotlights = useMemo(() => spotlightFlows(wall?.flows), [wall]);
+  const spotlights = useMemo(() => spotlightFlows(wall?.flows, { home: wall?.home?.institution }), [wall]);
+  const nameFor = useMemo(() => canonicalNames(wall), [wall]);
   const [tick, setTick] = useState(0);
   useEffect(() => {
     if (spotlights.length < 2) return undefined;
@@ -48,7 +50,7 @@ export default function WallPage() {
           <p className="wall-kicker">
             National Research Platform{wall ? ` · ${formatDay(wall.day)}` : ''}
           </p>
-          <h1 className="wall-headline">Every day, scientists share computers across the whole country.</h1>
+          <h1 className="wall-headline">Every day, scientists share computers nationwide.</h1>
           <p className="wall-lede">
             GPUs are powerful chips behind AI and science simulations, and the National Research
             Platform lets researchers at one school use GPUs at schools across the country.
@@ -72,9 +74,9 @@ export default function WallPage() {
             />
             {wall && (
               <>
-                <WallSpotlight flow={spotlight} />
+                <WallSpotlight flow={spotlight} nameFor={nameFor} />
                 <WallLegend wall={wall} focus={focus} />
-                <WallTiles wall={wall} focus={focus} />
+                <WallTiles wall={wall} focus={focus} reducedMotion={reducedMotion} />
               </>
             )}
           </>

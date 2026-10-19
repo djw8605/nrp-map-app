@@ -132,7 +132,7 @@ dashboard (Vercel)
 ### Layout (16:9, sized in `vh`/`vw`)
 
 - Header: kicker "National Research Platform · October 17, 2026", serif headline
-  "Every day, scientists share computers across the whole country.", one plain
+  "Every day, scientists share computers nationwide.", one plain
   sentence on GPUs and the NRP.
 - Main: the map (about 70% of the width) with the spotlight line under it, and a
   column of five tiles: GPU hours, away share, host sites and user institutions,

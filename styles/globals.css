@@ -802,8 +802,21 @@ thead {
   }
 }
 
+/* A replayed count that just moved on brightens to the ink colour, then settles. */
+.wall-tick {
+  font-variant-numeric: tabular-nums;
+  animation: wall-tick 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes wall-tick {
+  from {
+    color: var(--wall-ink);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .wall-fade {
+  .wall-fade,
+  .wall-tick {
     animation: none;
   }
 }

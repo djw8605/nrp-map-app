@@ -81,8 +81,11 @@ in one plain sentence, then shows one day of real GPU work: host campuses as
 glowing dots sized by the GPU hours they ran, and light moving along arcs from
 each researcher's campus to the campus whose GPUs ran the work. Five tiles give
 the day's totals beside the last 30 days', and a line under the map rotates
-through the largest long-distance partnerships. The home institution is amber,
-with a "You are here" label.
+every 11 seconds through the largest partnerships that cross the country or touch
+home: a comet flies that arc and lands with one ring, and both ends are labelled
+on the map. The AI tile counts the day's novels' worth of text, replayed at that
+day's average pace against today's clock (the accounting data has one row per
+day). The home institution is amber, with a "You are here" label.
 
 - Hover a dot (mouse) to see the institution's name. Click or tap one to make it
   the amber one: the amber tile then reads "Here at the University of Missouri"
@@ -98,8 +101,9 @@ with a "You are here" label.
   `node scripts/build-wall-outline.mjs` (committed; rebuild only if the source
   changes). The map uses no Mapbox and needs no token.
 - Checks: `node scripts/run-wall-checks.mjs`.
-- No navbar or footer; sized in viewport units for a 16:9 screen. Motion stops
-  under `prefers-reduced-motion`.
+- No navbar or footer; sized in viewport units for a 16:9 screen. Under
+  `prefers-reduced-motion` the map is still, there is no comet, and the counter
+  moves once a minute.
 - Local development: put a `generate-wall.js --dry-run` output in
   `public/dev/wall.json` and set `WALL_PUBLIC_URL` to a URL that serves it, such
   as `http://localhost:3000/dev/wall.json`, in `.env.development.local`.
