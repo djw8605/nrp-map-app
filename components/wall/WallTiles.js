@@ -73,10 +73,15 @@ export default function WallTiles({ wall, focus = wall.home.institution, reduced
   const both = (format, key) => ({ day: format(totals[key]), month: month ? format(month[key]) : null });
   const captions = [formatShortDay(wall.day), 'Last 30 days'];
   const amber = focusTile(wall, focus);
-  const users = month ? month.user_institutions : totals.user_institutions;
 
+  /*
+   * Only totals that add up over time get a 30-day column: GPU hours, AI text
+   * and the amber tile's hours grow about thirtyfold. A share averages out and
+   * a count of campuses barely grows (74% against 77%, 41 against 44), so side
+   * by side they read as a repeat; those tiles show the day, as the map does.
+   */
   return (
-    <div className="wall-tiles">
+    <div className={month ? 'wall-tiles wall-tiles-paired' : 'wall-tiles'}>
       <Tile
         captions={captions}
         {...both(formatHours, 'gpu_hours')}
@@ -86,16 +91,18 @@ export default function WallTiles({ wall, focus = wall.home.institution, reduced
           : `Like one graphics card running nonstop for ${formatYears(totals.gpu_years)}.`}
       />
       <Tile
-        captions={captions}
-        {...both(formatPercent, 'away_share')}
+        day={formatPercent(totals.away_share)}
+        month={null}
         label="ran on GPUs at another campus"
         note="Not at the researcher's own school."
       />
       <Tile
-        captions={captions}
-        {...both((value) => value.toLocaleString('en-US'), 'host_sites')}
+        day={totals.host_sites.toLocaleString('en-US')}
+        month={null}
         label="campuses and data centers shared their GPUs"
-        note={`With researchers from ${countOf(users, 'organization', 'organizations')}${month ? ' over 30 days' : ''}.`}
+        note={month
+          ? `${month.host_sites.toLocaleString('en-US')} over the last 30 days, with researchers from ${countOf(month.user_institutions, 'organization', 'organizations')}.`
+          : `With researchers from ${countOf(totals.user_institutions, 'organization', 'organizations')}.`}
       />
       <Tile
         captions={captions}
