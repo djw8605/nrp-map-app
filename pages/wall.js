@@ -50,7 +50,7 @@ export default function WallPage() {
           <p className="wall-kicker">
             National Research Platform{wall ? ` · ${formatDay(wall.day)}` : ''}
           </p>
-          <h1 className="wall-headline">Every day, scientists share computers across the whole country.</h1>
+          <h1 className="wall-headline">Every day, scientists share computers nationwide.</h1>
           <p className="wall-lede">
             GPUs are powerful chips behind AI and science simulations, and the National Research
             Platform lets researchers at one school use GPUs at schools across the country.
