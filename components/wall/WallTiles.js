@@ -1,10 +1,11 @@
+import { usePace } from './usePace';
 import {
   countOf,
   focusTile,
+  formatClock,
   formatHours,
   formatLarge,
   formatPercent,
-  formatRoughly,
   formatShortDay,
   formatYears,
 } from '../../lib/wall';
@@ -49,8 +50,24 @@ function Tile({ kicker, day, month, captions, label, note, home = false }) {
   );
 }
 
+/*
+ * The AI tile's moving part: the day's novels' worth of text, replayed at that
+ * day's average pace against today's clock. The date is in the sentence so the
+ * count never reads as "right now"; the changed number brightens briefly.
+ */
+function NovelPace({ day, novels, reducedMotion }) {
+  const { value, now } = usePace(novels, reducedMotion);
+  return (
+    <>
+      {`At ${formatShortDay(day)}'s pace, by ${formatClock(now)}: `}
+      <span key={value} className="wall-tick">{value.toLocaleString('en-US')}</span>
+      {" novels' worth."}
+    </>
+  );
+}
+
 // The five numbers beside the map, in plain words, for the day and the 30 days.
-export default function WallTiles({ wall, focus = wall.home.institution }) {
+export default function WallTiles({ wall, focus = wall.home.institution, reducedMotion = false }) {
   const { totals } = wall;
   const month = wall.month?.totals || null;
   const both = (format, key) => ({ day: format(totals[key]), month: month ? format(month[key]) : null });
@@ -84,7 +101,12 @@ export default function WallTiles({ wall, focus = wall.home.institution }) {
         captions={captions}
         {...both(formatLarge, 'llm_tokens')}
         label="pieces of text read and written by AI chatbots"
-        note={`The same kind of AI as ChatGPT, running on NRP GPUs. About ${formatRoughly((month || totals).llm_novels)} novels' worth${month ? ' over 30 days' : ''}.`}
+        note={(
+          <>
+            {'The same kind of AI as ChatGPT, running on NRP GPUs. '}
+            <NovelPace day={wall.day} novels={totals.llm_novels} reducedMotion={reducedMotion} />
+          </>
+        )}
       />
       <Tile
         home

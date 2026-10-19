@@ -4,7 +4,7 @@ import { spotlightParts } from '../../lib/wall';
  * One long-distance partnership at a time, under the map. The page rotates
  * `flow`; the key restarts the fade-in (which reduced motion turns off in CSS).
  */
-export default function WallSpotlight({ flow }) {
+export default function WallSpotlight({ flow, nameFor }) {
   if (!flow) {
     return (
       <p className="wall-spotlight">
@@ -12,7 +12,7 @@ export default function WallSpotlight({ flow }) {
       </p>
     );
   }
-  const parts = spotlightParts(flow);
+  const parts = spotlightParts(flow, nameFor);
   return (
     <p className="wall-spotlight" aria-live="polite">
       <span key={`${flow.from}\u0000${flow.to}`} className="wall-fade">
