@@ -682,7 +682,8 @@ thead {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1vw;
 }
-.wall-tile-pair .wall-tile-value {
+/* One figure size down the column, whether a tile pairs two figures or shows one. */
+.wall-tiles-paired .wall-tile-value {
   font-size: min(3.9vh, 2.2vw);
   white-space: nowrap;
 }
