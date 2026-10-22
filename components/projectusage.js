@@ -2,8 +2,6 @@ import React from "react";
 import { GetNamespaces, GetNamespaceUsage } from "./gatherdata";
 import DataTable from 'react-data-table-component';
 import { useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 
 function numberWithCommas(x) {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");

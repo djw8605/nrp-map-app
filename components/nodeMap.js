@@ -10,8 +10,7 @@ import useSWR from 'swr';
 import { fetcher } from '../lib/fetcher';
 
 import Link from 'next/link';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {faUpRightAndDownLeftFromCenter} from "@fortawesome/free-solid-svg-icons";
+import { RiExpandDiagonalLine } from '@remixicon/react';
 
 import SitePinMarker from './map/SitePinMarker';
 import SiteHoverCard from './map/SiteHoverCard';
@@ -531,7 +530,7 @@ export default function NodeMap({
             aria-label="Open full-screen map"
             className="map-glass-panel absolute top-3 right-3 z-10 flex items-center justify-center p-2 transition-colors"
           >
-            <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+            <RiExpandDiagonalLine className="h-4 w-4 text-slate-700 dark:text-slate-200" />
           </Link>
         )}
 

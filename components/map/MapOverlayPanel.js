@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faChevronUp, faXmark, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { RiArrowDownSLine, RiArrowUpSLine, RiCloseLine, RiArrowLeftLine } from '@remixicon/react';
 
 /*
  * Below these container dimensions the panel would cover the map rather than sit
@@ -111,7 +110,7 @@ export default function MapOverlayPanel({
               aria-label={backLabel}
               className={`map-glass-panel__btn ${titleNode ? '' : 'mt-0.5'}`}
             >
-              <FontAwesomeIcon icon={faArrowLeft} className="h-3.5 w-3.5" />
+              <RiArrowLeftLine className="h-3.5 w-3.5" />
             </button>
           ) : null}
 
@@ -144,10 +143,11 @@ export default function MapOverlayPanel({
               aria-label={isExpanded ? 'Collapse panel' : 'Expand panel'}
               className="map-glass-panel__btn"
             >
-              <FontAwesomeIcon
-                icon={isExpanded ? faChevronDown : faChevronUp}
-                className="h-3.5 w-3.5"
-              />
+              {isExpanded ? (
+                <RiArrowDownSLine className="h-3.5 w-3.5" />
+              ) : (
+                <RiArrowUpSLine className="h-3.5 w-3.5" />
+              )}
             </button>
           ) : null}
 
@@ -159,7 +159,7 @@ export default function MapOverlayPanel({
               aria-label="Close panel"
               className="map-glass-panel__btn"
             >
-              <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+              <RiCloseLine className="h-3.5 w-3.5" />
             </button>
           ) : null}
         </div>

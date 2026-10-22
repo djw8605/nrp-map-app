@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useSWR from 'swr'
 import { GetCoreHoursRate, GetProjects } from './gatherdata';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMicrochip, faBuildingColumns, faUserGroup, faArrowUp } from '@fortawesome/free-solid-svg-icons'
+import { RiCpuLine, RiBankLine, RiGroupLine, RiArrowUpLine } from '@remixicon/react';
 
 var rateInterval = 0;
 
@@ -86,13 +85,13 @@ export default function LiveMetrics() {
   return (
     <>
       <div className='col-md-4'>
-        <LiveMetricRate title='Core Hours Contributed' rate={coreHoursRate.corehours * 3600 * 24} loading={loading} value={coreHours.corehours} colorScheme="l-bg-orange-dark" icon={faMicrochip} />
+        <LiveMetricRate title='Core Hours Contributed' rate={coreHoursRate.corehours * 3600 * 24} loading={loading} value={coreHours.corehours} colorScheme="l-bg-orange-dark" icon={RiCpuLine} />
       </div>
       <div className='col-md-4'>
-        <LiveMetricRate title='GPU Hours Contributed' rate={coreHoursRate.gpuhours * 3600 * 24} value={coreHours.gpuhours} loading={loading} colorScheme="l-bg-cherry" icon={faUserGroup} />
+        <LiveMetricRate title='GPU Hours Contributed' rate={coreHoursRate.gpuhours * 3600 * 24} value={coreHours.gpuhours} loading={loading} colorScheme="l-bg-cherry" icon={RiGroupLine} />
       </div>
       <div className='col-md-4'>
-        <LiveMetricRate title='Institutions Supported' value={totalOrganizations} loading={loading} colorScheme="l-bg-cyan" icon={faBuildingColumns} />
+        <LiveMetricRate title='Institutions Supported' value={totalOrganizations} loading={loading} colorScheme="l-bg-cyan" icon={RiBankLine} />
       </div>
     </>
   )
@@ -104,7 +103,7 @@ function LiveMetricRate(props) {
     <>
       <div className={`card ${props.colorScheme}`}>
         <div className="card-statistic-3 p-4">
-          <div className="card-icon card-icon-large"><FontAwesomeIcon icon={props.icon} /></div>
+          <div className="card-icon card-icon-large"><props.icon size="1em" /></div>
           <div className="mb-4">
             <h5 className="card-title mb-0">{props.title}</h5>
           </div>
@@ -127,7 +126,7 @@ function LiveMetricRate(props) {
             {props.rate ? (
               <>
                 <div className="col-4 text-right">
-                  <span><FontAwesomeIcon icon={faArrowUp} />~{convertWithK(props.rate)}/day</span>
+                  <span><RiArrowUpLine size="1em" className="inline" />~{convertWithK(props.rate)}/day</span>
                 </div>
               </>
             ) : (

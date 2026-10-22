@@ -1,8 +1,4 @@
-import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import {
-  faRotateRight,
-  faCircleArrowUp, faCircleArrowDown
-} from "@fortawesome/free-solid-svg-icons";
+import { RiLoader4Line, RiArrowUpCircleLine, RiArrowDownCircleLine } from '@remixicon/react';
 import useSWR from 'swr'
 import {Badge, BarChart, Card, SparkAreaChart, BadgeDelta, Table, TableHead, TableRow, TableHeaderCell, TableBody, TableCell} from '@tremor/react';
 import {useEffect, useMemo} from 'react';
@@ -55,14 +51,14 @@ function LoadingElement() {
   return (
     <div className="flex gap-2 items-center">
       <div>
-        <FontAwesomeIcon icon={faRotateRight} className='animate-spin h-6 w-6'/>
+        <RiLoader4Line className='animate-spin h-6 w-6'/>
       </div>
       <div className=''>Loading...</div>
     </div>
   )
 }
 
-function NetworkCard({data, currentValue, title, icon, iconColor, graphColor}) {
+function NetworkCard({data, currentValue, title, icon: Icon, iconColor, graphColor}) {
   return (
     <Card className="w-full flex flex-col justify-between rounded-xl shadow-sm p-0">
       <div className="flex flex-row justify-between items-center px-4 pt-4">
@@ -73,7 +69,7 @@ function NetworkCard({data, currentValue, title, icon, iconColor, graphColor}) {
           </p>
         </div>
         <div>
-          <FontAwesomeIcon icon={icon} size="lg" className={`${iconColor}`}/>
+          <Icon className={`h-5 w-5 ${iconColor}`}/>
         </div>
       </div>
       {!data ? (
@@ -132,7 +128,7 @@ export function SiteNetworkStats({site}) {
           data={data ? data.receive : null}
           currentValue={humanReceive}
           title="Receive"
-          icon={faCircleArrowDown}
+          icon={RiArrowDownCircleLine}
           iconColor="text-green-500"
           graphColor="emerald"
         />
@@ -140,7 +136,7 @@ export function SiteNetworkStats({site}) {
           data={data ? data.transmit : null}
           currentValue={humanTransmit}
           title="Transmit"
-          icon={faCircleArrowUp}
+          icon={RiArrowUpCircleLine}
           iconColor="text-red-500"
           graphColor="red"
         />
