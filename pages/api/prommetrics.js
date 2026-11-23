@@ -26,12 +26,19 @@ export default async function handler(req, res) {
   } else if (query == "namespacemetrics") {
     pomQuery = 'count(count by (namespace) (kube_pod_info))'
   } else if (query == "clustermetrics") {
+    // Built on recording rules the cluster already evaluates, so a range query
+    // reads three pre-aggregated series instead of every raw DCGM and
+    // kube_pod_info sample in the window (~55s against Thanos down to <1s):
+    //   nrp:jh_users_currently_provisioned = count(count by (pod, namespace) (kube_pod_info{pod=~"jupyter-.*"}))
+    //   namespace_gpu_usage                = count by (namespace) (DCGM_FI_DEV_GPU_TEMP)
+    // round() because Thanos answers long ranges from downsampled averages,
+    // which can make the summed GPU count fractional.
     pomQuery = `
-      label_replace(count(kube_pod_info{pod=~"jupyter-.*"}), "type", "jupyter_pods", "", "")
+      label_replace(nrp:jh_users_currently_provisioned, "type", "jupyter_pods", "", "")
       or
-      label_replace(count(count by (namespace) (DCGM_FI_DEV_GPU_TEMP{namespace!="gpu-mon"})), "type", "gpu_namespaces", "", "")
+      label_replace(count(namespace_gpu_usage{namespace!="gpu-mon"}), "type", "gpu_namespaces", "", "")
       or
-      label_replace(count (DCGM_FI_DEV_GPU_TEMP{namespace!="gpu-mon"} * on (namespace, pod) group_left(node) max by (namespace, pod) (node_namespace_pod:kube_pod_info:)), "type", "gpus", "", "")
+      label_replace(round(sum(namespace_gpu_usage{namespace!="gpu-mon"})), "type", "gpus", "", "")
     `
   }
 
